@@ -1,0 +1,65 @@
+@using Emerus.ETM.Admin.Pages
+
+<div class="card-section">
+    <h5>Access Requests</h5>
+    <p class="text-muted">Select the RBAC groups or application roles needed. This is mocked data for UI layout only.</p>
+
+    <div class="row">
+        <div class="col-md-5">
+            <label class="form-label">Available Targets</label>
+            <select class="form-select" multiple style="min-height: 200px" @onchange="OnAdd">
+                @foreach (var target in AvailableTargets)
+                {
+                    <option value="@target">@target</option>
+                }
+            </select>
+        </div>
+        <div class="col-md-2 d-flex align-items-center justify-content-center">
+            <span class="text-muted">Selected</span>
+        </div>
+        <div class="col-md-5">
+            <label class="form-label">Requested Targets</label>
+            <ul class="list-group">
+                @foreach (var t in Model.RequestedTargets)
+                {
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <span>@t</span>
+                        <button class="btn btn-sm btn-outline-danger" @onclick="() => Remove(t)">Remove</button>
+                    </li>
+                }
+            </ul>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public OnboardingNew.AccessModel Model { get; set; } = default!;
+
+    private List<string> AvailableTargets = new()
+    {
+        "EPIC - Clinician",
+        "EPIC - Registration",
+        "Domain Group - NH-Shared-Drives",
+        "VPN Access",
+        "Email Account",
+        "Service Desk Portal"
+    };
+
+    private void OnAdd(ChangeEventArgs e)
+    {
+        // For mockup purposes, just add all available
+        foreach (var t in AvailableTargets)
+        {
+            if (!Model.RequestedTargets.Contains(t))
+            {
+                Model.RequestedTargets.Add(t);
+            }
+        }
+    }
+
+    private void Remove(string target)
+    {
+        Model.RequestedTargets.Remove(target);
+    }
+}

@@ -1,0 +1,24 @@
+@using Emerus.ETM.Admin.Pages
+
+<div class="card-section">
+    <h5>Job & Dates</h5>
+    <div class="row g-3">
+        <div class="col-md-6">
+            <label class="form-label">Job Title</label>
+            <input class="form-control" @bind="Model.JobTitle" />
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">Department</label>
+            <input class="form-control" @bind="Model.Department" />
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">Start Date</label>
+            <input class="form-control" @bind="Model.StartDate" type="date" />
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public OnboardingNew.JobModel Model { get; set; } = default!;
+}

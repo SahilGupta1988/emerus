@@ -1,0 +1,47 @@
+@using Emerus.ETM.Admin.Pages
+
+<div class="card-section">
+    <h5>Review</h5>
+    <p class="text-muted">Confirm that the information below is correct before submitting.</p>
+
+    <h6>Demographics</h6>
+    <p>@Demographics.FirstName @Demographics.LastName - @Demographics.PersonalEmail</p>
+
+    <h6>Job & Dates</h6>
+    <p>@JobInfo.JobTitle, @JobInfo.Department - Starts @JobInfo.StartDate.ToShortDateString()</p>
+
+    <h6>Access Requests</h6>
+    <ul>
+        @foreach (var t in AccessInfo.RequestedTargets)
+        {
+            <li>@t</li>
+        }
+    </ul>
+
+    <h6>Hardware</h6>
+    <p>
+        Laptop: @(Hardware.NeedsLaptop ? "Yes" : "No"),
+        Dock: @(Hardware.NeedsDock ? "Yes" : "No"),
+        Monitors: @Hardware.MonitorCount
+    </p>
+
+    <h6>Badge</h6>
+    <p>Badge requested: @(Badge.NeedsBadge ? "Yes" : "No")</p>
+</div>
+
+@code {
+    [Parameter]
+    public OnboardingNew.DemographicsModel Demographics { get; set; } = default!;
+
+    [Parameter]
+    public OnboardingNew.JobModel JobInfo { get; set; } = default!;
+
+    [Parameter]
+    public OnboardingNew.AccessModel AccessInfo { get; set; } = default!;
+
+    [Parameter]
+    public OnboardingNew.HardwareModel Hardware { get; set; } = default!;
+
+    [Parameter]
+    public OnboardingNew.BadgeModel Badge { get; set; } = default!;
+}

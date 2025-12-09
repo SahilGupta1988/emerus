@@ -1,0 +1,84 @@
+@page "/onboarding/my-contractors"
+
+<PageTitle>My Contractors</PageTitle>
+
+<div class="page-header d-flex justify-content-between align-items-center">
+    <div>
+        <h2>My Contractors</h2>
+        <p class="text-muted mb-0">Contractors submitted by your organization.</p>
+    </div>
+    <a class="btn btn-primary" href="onboarding/new">New Contractor</a>
+</div>
+
+<div class="card mt-3">
+    <div class="card-body">
+        <div class="row g-2 mb-3">
+            <div class="col-md-3">
+                <input class="form-control" placeholder="Search by name or email" @bind="SearchText" />
+            </div>
+            <div class="col-md-3">
+                <select class="form-select" @bind="StatusFilter">
+                    <option value="">All statuses</option>
+                    <option>Draft</option>
+                    <option>Submitted</option>
+                    <option>InReview</option>
+                    <option>InProgress</option>
+                    <option>Completed</option>
+                </select>
+            </div>
+        </div>
+
+        <table class="table table-hover mb-0">
+            <thead>
+                <tr>
+                    <th>Contractor</th>
+                    <th>Vendor</th>
+                    <th>Facility</th>
+                    <th>Start Date</th>
+                    <th>Status</th>
+                    <th class="text-end">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var row in FilteredRows)
+                {
+                    <tr>
+                        <td>@row.ContractorName</td>
+                        <td>@row.VendorName</td>
+                        <td>@row.Facility</td>
+                        <td>@row.StartDate.ToShortDateString()</td>
+                        <td><span class="badge bg-secondary">@row.Status</span></td>
+                        <td class="text-end">
+                            <a class="btn btn-sm btn-outline-secondary me-1" href="onboarding/request/@row.Id">View</a>
+                            @if (row.Status == "Draft")
+                            {
+                                <a class="btn btn-sm btn-outline-primary" href="onboarding/request/@row.Id?edit=1">Edit</a>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@code {
+    public record ContractorRow(Guid Id, string ContractorName, string VendorName, string Facility, DateTime StartDate, string Status);
+
+    private List<ContractorRow> AllRows = new()
+    {
+        new ContractorRow(Guid.NewGuid(), "Jane Doe", "Acme Health Staffing", "Houston Neighborhood", DateTime.Today.AddDays(3), "Submitted"),
+        new ContractorRow(Guid.NewGuid(), "John Smith", "Acme Health Staffing", "Mesa Neighborhood", DateTime.Today.AddDays(5), "InProgress"),
+        new ContractorRow(Guid.NewGuid(), "Maria Garcia", "Acme Health Staffing", "Phoenix Neighborhood", DateTime.Today.AddDays(10), "Draft")
+    };
+
+    private string SearchText { get; set; } = string.Empty;
+    private string StatusFilter { get; set; } = string.Empty;
+
+    private IEnumerable<ContractorRow> FilteredRows =>
+        AllRows
+            .Where(r => string.IsNullOrWhiteSpace(SearchText)
+                || r.ContractorName.Contains(SearchText, StringComparison.OrdinalIgnoreCase)
+                || r.VendorName.Contains(SearchText, StringComparison.OrdinalIgnoreCase))
+            .Where(r => string.IsNullOrWhiteSpace(StatusFilter) || r.Status.Equals(StatusFilter, StringComparison.OrdinalIgnoreCase));
+}

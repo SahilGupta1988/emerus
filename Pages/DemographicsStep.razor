@@ -1,0 +1,24 @@
+@using Emerus.ETM.Admin.Pages
+
+<div class="card-section">
+    <h5>Demographics</h5>
+    <div class="row g-3">
+        <div class="col-md-4">
+            <label class="form-label">First Name</label>
+            <input class="form-control" @bind="Model.FirstName" />
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">Last Name</label>
+            <input class="form-control" @bind="Model.LastName" />
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">Personal Email</label>
+            <input class="form-control" @bind="Model.PersonalEmail" type="email" />
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public OnboardingNew.DemographicsModel Model { get; set; } = default!;
+}

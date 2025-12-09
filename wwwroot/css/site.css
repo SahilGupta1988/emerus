@@ -1,0 +1,3 @@
+.sidebar { width: 220px; min-height: 100vh; }
+.table thead th { white-space: nowrap; }
+.json { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.9rem; }

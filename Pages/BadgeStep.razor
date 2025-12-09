@@ -1,0 +1,26 @@
+@using Emerus.ETM.Admin.Pages
+
+<div class="card-section">
+    <h5>Badge Request</h5>
+
+    <div class="form-check mb-3">
+        <input class="form-check-input" type="checkbox" id="NeedsBadge" @bind="Model.NeedsBadge" />
+        <label class="form-check-label" for="NeedsBadge">Request building access badge</label>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-md-6">
+            <label class="form-label">Facility</label>
+            <input class="form-control" />
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">Access Level</label>
+            <input class="form-control" />
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public OnboardingNew.BadgeModel Model { get; set; } = default!;
+}
