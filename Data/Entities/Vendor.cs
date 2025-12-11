@@ -9,16 +9,16 @@ namespace Emerus.ETM.Admin.Data
         public int UsersCount { get; set; }
     }
 
-    public class ContractorRequest
-    {
-        public int Id { get; set; }
-        public string ContractorName { get; set; } = string.Empty;
-        public string VendorName { get; set; } = string.Empty;
-        public string Facility { get; set; } = string.Empty;
-        public DateTime StartDate { get; set; }
-        public string Status { get; set; } = string.Empty;
-        public string Reviewer { get; set; } = string.Empty;
-    }
+    //public class ContractorRequest
+    //{
+    //    public Guid Id { get; set; }
+    //    public string ContractorName { get; set; } = string.Empty;
+    //    public string VendorName { get; set; } = string.Empty;
+    //    public string Facility { get; set; } = string.Empty;
+    //    public DateTime StartDate { get; set; }
+    //    public string Status { get; set; } = string.Empty;
+    //    public string Reviewer { get; set; } = string.Empty;
+    //}
 
     public class TaskItem
     {

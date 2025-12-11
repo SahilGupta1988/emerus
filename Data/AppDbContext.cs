@@ -13,6 +13,7 @@ namespace Emerus.ETM.Admin.Data
         public DbSet<ContractorRequest> ContractorRequests { get; set; } = null!;
         public DbSet<TaskItem> TaskItems { get; set; } = null!;
         public DbSet<Partner> Partners { get; set; } = null!;
+        public DbSet<ContractorPerson> ContractorPeople { get; set; } = null!;
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -22,32 +23,39 @@ namespace Emerus.ETM.Admin.Data
             {
                 entity.ToTable("Partner", schema: "etm");
                 entity.HasKey(e => e.PartnerCode);
+                entity.Property(e => e.PartnerCode).HasMaxLength(32).IsRequired().HasColumnName("PartnerCode");
+                entity.Property(e => e.DisplayName).HasMaxLength(128).IsRequired().HasColumnName("DisplayName");
+                entity.Property(e => e.Description).HasMaxLength(512).HasColumnName("Description");
+                entity.Property(e => e.IsActive).IsRequired().HasColumnName("IsActive");
+                entity.Property(e => e.CreatedAt).IsRequired().HasColumnName("CreatedAt");
+                entity.Property(e => e.UpdatedAt).IsRequired().HasColumnName("UpdatedAt");
+            });
 
-                entity.Property(e => e.PartnerCode)
-                    .HasMaxLength(32)
-                    .IsRequired()
-                    .HasColumnName("PartnerCode");
+            // SINGLE definitive one-to-one mapping between ContractorRequest and ContractorPerson
+            modelBuilder.Entity<ContractorRequest>(entity =>
+            {
+                entity.ToTable("ContractorRequest", "etm");
+                entity.HasKey(e => e.RequestId);
+                entity.Property(e => e.PartnerCode).HasMaxLength(32).HasColumnName("PartnerCode");
 
-                entity.Property(e => e.DisplayName)
-                    .HasMaxLength(128)
-                    .IsRequired()
-                    .HasColumnName("DisplayName");
+                entity.HasOne(r => r.ContractorPerson)
+                      .WithOne(p => p.ContractorRequest)
+                      .HasForeignKey<ContractorPerson>(p => p.RequestId)
+                      .HasConstraintName("FK_ContractorPerson_ContractorRequest_RequestId");
+            });
 
-                entity.Property(e => e.Description)
-                    .HasMaxLength(512)
-                    .HasColumnName("Description");
+            modelBuilder.Entity<ContractorRequest>()
+                .HasOne(r => r.Partner)
+                .WithMany()
+                .HasForeignKey(r => r.PartnerCode);
 
-                entity.Property(e => e.IsActive)
-                    .IsRequired()
-                    .HasColumnName("IsActive");
-
-                entity.Property(e => e.CreatedAt)
-                    .IsRequired()
-                    .HasColumnName("CreatedAt");
-
-                entity.Property(e => e.UpdatedAt)
-                    .IsRequired()
-                    .HasColumnName("UpdatedAt");
+            // ContractorPerson minimal mapping; do NOT re-declare the relationship again here
+            modelBuilder.Entity<ContractorPerson>(entity =>
+            {
+                entity.ToTable("ContractorPerson", schema: "etm");
+                entity.HasKey(e => e.RequestId);
+                entity.Property(e => e.RequestId).HasColumnName("RequestId");
+                // other properties can be configured as needed...
             });
         }
     }
