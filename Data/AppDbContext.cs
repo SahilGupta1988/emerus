@@ -14,6 +14,8 @@ namespace Emerus.ETM.Admin.Data
         public DbSet<TaskItem> TaskItems { get; set; } = null!;
         public DbSet<Partner> Partners { get; set; } = null!;
         public DbSet<ContractorPerson> ContractorPeople { get; set; } = null!;
+        public DbSet<ContractorHardwareRequest> ContractorHardwareRequest { get; set; } = null!;
+
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -42,6 +44,10 @@ namespace Emerus.ETM.Admin.Data
                       .WithOne(p => p.ContractorRequest)
                       .HasForeignKey<ContractorPerson>(p => p.RequestId)
                       .HasConstraintName("FK_ContractorPerson_ContractorRequest_RequestId");
+                entity.HasOne(r => r.ContractorHardwareRequest)
+                      .WithOne(p => p.ContractorRequest)
+                      .HasForeignKey<ContractorHardwareRequest>(p => p.RequestId)
+                      .HasConstraintName("FK_ContractorHardwareRequest_ContractorRequest_RequestId");
             });
 
             modelBuilder.Entity<ContractorRequest>()
@@ -53,6 +59,14 @@ namespace Emerus.ETM.Admin.Data
             modelBuilder.Entity<ContractorPerson>(entity =>
             {
                 entity.ToTable("ContractorPerson", schema: "etm");
+                entity.HasKey(e => e.RequestId);
+                entity.Property(e => e.RequestId).HasColumnName("RequestId");
+                // other properties can be configured as needed...
+            });
+
+            modelBuilder.Entity<ContractorHardwareRequest>(entity =>
+            {
+                entity.ToTable("ContractorHardwareRequest", schema: "etm");
                 entity.HasKey(e => e.RequestId);
                 entity.Property(e => e.RequestId).HasColumnName("RequestId");
                 // other properties can be configured as needed...

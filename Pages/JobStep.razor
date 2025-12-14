@@ -4,14 +4,38 @@
     <h5>Job & Dates</h5>
     <div class="row g-3">
         <div class="col-md-6">
+            <label class="form-label">Agency Name</label>
+            <input class="form-control" @bind="Model.AgencyName" />
+        </div>
+
+        <div class="col-md-6">
             <label class="form-label">Job Title</label>
             <input class="form-control" @bind="Model.JobTitle" />
         </div>
+
+        <div class="col-md-6">
+            <label class="form-label">Job Code</label>
+            <input class="form-control" @bind="Model.JobCode" />
+        </div>
+
         <div class="col-md-6">
             <label class="form-label">Department</label>
             <input class="form-control" @bind="Model.Department" />
         </div>
-        <div class="col-md-4">
+
+        <div class="col-md-6">
+            <label class="form-label">External Employee ID</label>
+            <input class="form-control" @bind="Model.ExternalEmployeeId" />
+        </div>
+
+        <div class="col-md-3">
+            <label class="form-check form-switch mt-3">
+                <input class="form-check-input" type="checkbox" @bind="Model.PriorEmployeeFlag" />
+                <span class="form-check-label">Prior Employee</span>
+            </label>
+        </div>
+
+        <div class="col-md-3">
             <label class="form-label">Start Date</label>
             <input class="form-control" @bind="Model.StartDate" type="date" />
         </div>

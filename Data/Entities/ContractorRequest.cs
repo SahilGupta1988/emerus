@@ -50,5 +50,9 @@ namespace Emerus.ETM.Admin.Data
         // One-to-One with ContractorPerson
         public ContractorPerson ContractorPerson { get; set; }
 
+
+        // One-to-One with ContractorHardwareRequest
+        public ContractorHardwareRequest ContractorHardwareRequest { get; set; }
+
     }
 }

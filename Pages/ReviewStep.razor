@@ -5,10 +5,17 @@
     <p class="text-muted">Confirm that the information below is correct before submitting.</p>
 
     <h6>Demographics</h6>
-    <p>@Demographics.FirstName @Demographics.LastName - @Demographics.PersonalEmail</p>
+    <p>Name - @Demographics.FirstName @Demographics.LastName - Email - @Demographics.PersonalEmail - Cell Phone - @Demographics.CellPhone</p>
+    <p>Preffered Name - @Demographics.PreferredLastName  @Demographics.PreferredFirstName -DOB - @Demographics.DateOfBirth</p>
+    <p>@Demographics.Gender, Identity - @Demographics.Identity</p>
+    <p>Address - @Demographics.AddressLine1, @Demographics.AddressLine2</p>
+    <p>@Demographics.City, @Demographics.State, @Demographics.Postal</p>
+    <p>@Demographics.Country</p>
 
     <h6>Job & Dates</h6>
-    <p>@JobInfo.JobTitle, @JobInfo.Department - Starts @JobInfo.StartDate.ToShortDateString()</p>
+    <p>Job Title - @JobInfo.JobTitle, Department - @JobInfo.Department - Starts @JobInfo.StartDate.ToShortDateString()</p>
+    <p>Agency - @JobInfo.AgencyName, Job Code - @JobInfo.JobCode - ExternalEmployeeId - @JobInfo.ExternalEmployeeId</p>
+    <p>PriorEmployeeFlag - @JobInfo.PriorEmployeeFlag, StartDate - @JobInfo.StartDate</p>
 
     <h6>Access Requests</h6>
     <ul>
@@ -22,11 +29,17 @@
     <p>
         Laptop: @(Hardware.NeedsLaptop ? "Yes" : "No"),
         Dock: @(Hardware.NeedsDock ? "Yes" : "No"),
-        Monitors: @Hardware.MonitorCount
+        Monitors: @Hardware.MonitorCount,
+        Headset: @(Hardware.NeedsHeadset ? "Yes" : "No"),
+        Hotspot: @(Hardware.NeedsHotspot ? "Yes" : "No"),
+        Notes: @Hardware.Notes
+
     </p>
 
     <h6>Badge</h6>
     <p>Badge requested: @(Badge.NeedsBadge ? "Yes" : "No")</p>
+    Primary Facility: @Badge.PrimaryFacility,
+    Access Level/ Request Type: @Badge.RequestType,
 </div>
 
 @code {

@@ -105,6 +105,7 @@
     private HardwareModel Hardware { get; set; } = new();
     private BadgeModel Badge { get; set; } = new();
 
+
     void GoToStep(int i)
     {
         if (i <= MaxStepIndex)
@@ -158,11 +159,11 @@
                 RequestId = Guid.NewGuid(),
                 RequestedByUpn = $"{Demographics.FirstName} {Demographics.LastName}",
                 PartnerCode = "AGENCY1",
-                PrimaryFacility = string.Empty,
+                PrimaryFacility = Badge.PrimaryFacility,
+                RequestType = Badge.RequestType,
                 SubmittedAt = DateTime.UtcNow,//JobInfo.StartDate,
                 CreatedAt = DateTime.UtcNow,//JobInfo.StartDate,
                 Status = "New",
-                RequestType = "Contingent",
                 UserId = Guid.Parse("6116088C-850F-4C38-A342-22CCE2071DC3")
                 // Reviewer = string.Empty
             };
@@ -171,22 +172,47 @@
             var person = new ContractorPerson
             {
                 RequestId = request.RequestId,
-                //RequestId = Guid.Parse("F9853E67-DDF6-4FEE-B5A3-C75A28BCA5F0"),
                 FirstName = Demographics.FirstName,
+                PreferredFirstName = Demographics.PreferredFirstName,
                 LastName = Demographics.LastName,
+                PreferredLastName = Demographics.PreferredLastName,
                 PersonalEmail = Demographics.PersonalEmail,
+                CellPhone = Demographics.CellPhone,
+                DateOfBirth = Demographics.DateOfBirth,
+                Gender = Demographics.Gender,
+                AddressLine1 = Demographics.AddressLine1,
+                AddressLine2 = Demographics.AddressLine2,
+                City = Demographics.City,
+                StateProvince = Demographics.State,
+                PostalCode = Demographics.Postal,
+                CountryCode = Demographics.Country,
                 JobTitle = JobInfo.JobTitle,
                 Department = JobInfo.Department,
                 StartDate = JobInfo.StartDate,
-                PriorEmployeeFlag = false,
+                PriorEmployeeFlag = JobInfo.PriorEmployeeFlag,
+                ExternalEmployeeId = JobInfo.ExternalEmployeeId,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
                 // set other properties as needed (CellPhone, Address, etc.)
             };
 
+            var hardware = new ContractorHardwareRequest
+            {
+                RequestId = request.RequestId,
+                NeedsLaptop = Hardware.NeedsLaptop,
+                NeedsDock = Hardware.NeedsDock,
+                MonitorCount = Hardware.MonitorCount,
+                NeedsHeadset = Hardware.NeedsHeadset,
+                NeedsHotspot = Hardware.NeedsHotspot,
+                Notes = Hardware.Notes,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+
             // Add both to the context. Fluent configuration ensures RequestId is the FK.
             Db.ContractorRequests.Add(request);
             Db.ContractorPeople.Add(person);
+            Db.ContractorHardwareRequest.Add(hardware);
             await Db.SaveChangesAsync();
 
             // Navigate to request details (assumes route exists: /onboarding/request/{id})
@@ -209,14 +235,30 @@
     public class DemographicsModel
     {
         public string FirstName { get; set; } = string.Empty;
+        public string PreferredFirstName { get; set; } = string.Empty;
         public string LastName  { get; set; } = string.Empty;
+        public string PreferredLastName { get; set; } = string.Empty;
         public string PersonalEmail { get; set; } = string.Empty;
+        public string CellPhone { get; set; } = string.Empty;
+        public DateTime DateOfBirth { get; set; } = DateTime.Today;
+        public string Gender { get; set; } = string.Empty;
+        public string AddressLine1 { get; set; } = string.Empty;
+        public string AddressLine2 { get; set; } = string.Empty;
+        public string City { get; set; } = string.Empty;
+        public string State { get; set; } = string.Empty;
+        public string Postal { get; set; } = string.Empty;
+        public string Country { get; set; } = string.Empty;
+        public string Identity { get; set; } = string.Empty;
     }
 
     public class JobModel
     {
+        public string AgencyName { get; set; } = string.Empty;
         public string JobTitle { get; set; } = string.Empty;
+        public string JobCode { get; set; } = string.Empty;
         public string Department { get; set; } = string.Empty;
+        public string ExternalEmployeeId { get; set; } = string.Empty;
+        public bool PriorEmployeeFlag { get; set; } = false;
         public DateTime StartDate { get; set; } = DateTime.Today;
     }
 
@@ -230,10 +272,15 @@
         public bool NeedsLaptop { get; set; } = true;
         public bool NeedsDock { get; set; } = true;
         public int MonitorCount { get; set; } = 2;
+        public bool NeedsHeadset { get; set; } = true;
+        public bool NeedsHotspot { get; set; } = true;
+        public string Notes { get; set; } = string.Empty;
     }
 
     public class BadgeModel
     {
         public bool NeedsBadge { get; set; } = true;
+        public string PrimaryFacility { get; set; } = string.Empty;
+        public string RequestType { get; set; } = string.Empty;
     }
 }
