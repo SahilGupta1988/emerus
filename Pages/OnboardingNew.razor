@@ -2,6 +2,7 @@
 @using Emerus.ETM.Admin.Data
 @inject AppDbContext Db
 @inject NavigationManager Navigation
+@attribute [Authorize(Roles = "Approver,Requestor")]
 
 <PageTitle>New Contractor</PageTitle>
 
