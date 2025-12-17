@@ -85,6 +85,8 @@
 </div>
 
 @code {
+
+
     private List<string> Steps = new()
     {
         "Demographics",
@@ -106,6 +108,14 @@
     private BadgeModel Badge { get; set; } = new();
 
 
+
+
+
+    // New: store the GUID generated when creating/saving a request (draft or final)
+
+    private Guid SavedRequestId { get; set; }
+
+
     void GoToStep(int i)
     {
         if (i <= MaxStepIndex)
@@ -114,78 +124,223 @@
         }
     }
 
-    void Next()
+@using Microsoft.EntityFrameworkCore
+
+
+    async Task Next()
+{
+    if (CurrentStepIndex < Steps.Count - 1)
     {
-        if (CurrentStepIndex < Steps.Count - 1)
+        if (CurrentStepIndex == 0)
         {
-            CurrentStepIndex++;
-            if (CurrentStepIndex > MaxStepIndex)
-            {
-                MaxStepIndex = CurrentStepIndex;
-            }
+            await SaveDemographicDetails();
+        }
+        if (CurrentStepIndex == 1)
+        {
+            await SaveJobAndDates();
+        }
+        if (CurrentStepIndex == 2)
+        {
+            // await SaveAccess();
+        }
+        if (CurrentStepIndex == 3)
+        {
+            await SaveHardware();
+        }
+        if (CurrentStepIndex == 4)
+        {
+            // await SaveBadge();
+        }
+        if (CurrentStepIndex == 5)
+        {
+            // await SaveCompliance();
+        }
+
+        CurrentStepIndex++;
+        if (CurrentStepIndex > MaxStepIndex)
+        {
+            MaxStepIndex = CurrentStepIndex;
         }
     }
+}
 
-    void Previous()
+
+void Previous()
+{
+    if (CurrentStepIndex > 0)
     {
-        if (CurrentStepIndex > 0)
+        CurrentStepIndex--;
+    }
+}
+
+async Task SaveDraft()
+{
+    if (CurrentStepIndex == 0)
+    {
+        await SaveDemographicDetails();
+    }
+    if (CurrentStepIndex == 1)
+    {
+        await SaveJobAndDates();
+    }
+    if (CurrentStepIndex == 2)
+    {
+        // await SaveAccess();
+    }
+    if (CurrentStepIndex == 3)
+    {
+        await SaveHardware();
+    }
+    if (CurrentStepIndex == 4)
+    {
+        // await SaveBadge();
+    }
+    if (CurrentStepIndex == 5)
+    {
+        // await SaveCompliance();
+    }
+}
+
+private bool IsSubmitting;
+private string? SubmitError;
+
+
+
+void Submit()
+{
+    // TODO: Persist and redirect
+    IsSubmitting = true;
+    SubmitError = null;
+
+    try
+    {
+        if (SavedRequestId == Guid.Empty)
         {
-            CurrentStepIndex--;
+            SubmitError = "No saved request id available to update.";
+            return;
         }
-    }
 
-    void SaveDraft()
-    {
-        // TODO: Hook up to backend
-    }
+        // Try to find an existing person for this request id
+        var existing = Db.ContractorRequests.FirstOrDefault(p => p.RequestId == SavedRequestId);
 
-    private bool IsSubmitting;
-    private string? SubmitError;
-
-    async Task Submit()
-    {
-        // TODO: Persist and redirect
-        IsSubmitting = true;
-        SubmitError = null;
-
-        try
+        if (existing != null)
         {
-            // Create request id that will be used in routes/listing (MyContractors uses GUIDs)
-            // var requestId = Guid.NewGuid();
+            // Update only the job/date fields
+            existing.Status = "Submitted";
+            Db.SaveChanges();
+        }
+        Navigation.NavigateTo($"/");
+    }
+    catch (Exception ex)
+    {
+        // Surface a friendly error message and keep the page interactive
+        SubmitError = "Unable to submit request. " + ex.Message;
+    }
+    finally
+    {
+        IsSubmitting = false;
+        StateHasChanged();
+    }
+}
 
-            // Create the ContractorRequest entity and assign a GUID id.
-            var request = new ContractorRequest
-            {
-                RequestId = Guid.NewGuid(),
-                RequestedByUpn = $"{Demographics.FirstName} {Demographics.LastName}",
-                PartnerCode = "AGENCY1",
-                PrimaryFacility = Badge.PrimaryFacility,
-                RequestType = Badge.RequestType,
-                SubmittedAt = DateTime.UtcNow,//JobInfo.StartDate,
-                CreatedAt = DateTime.UtcNow,//JobInfo.StartDate,
-                Status = "New",
-                UserId = Guid.Parse("6116088C-850F-4C38-A342-22CCE2071DC3")
-                // Reviewer = string.Empty
-            };
 
-            // Map page models to ContractorPerson entity. Fill only known fields; other DB columns will use defaults/nulls.
+async Task SaveDemographicDetails()
+{
+    // Placeholder for any validation or processing needed when moving past demographics step
+    // Create the ContractorRequest entity and assign a GUID id.
+    try
+    {
+        var request = new ContractorRequest
+        {
+            RequestId = Guid.NewGuid(),
+            RequestedByUpn = $"{Demographics.FirstName} {Demographics.LastName}",
+            PartnerCode = "AGENCY1",
+            RequestType = "test",
+            // PrimaryFacility = Badge.PrimaryFacility,
+            // RequestType = Badge.RequestType,
+            // SubmittedAt = DateTime.UtcNow,//JobInfo.StartDate,
+            CreatedAt = DateTime.UtcNow,//JobInfo.StartDate,
+            Status = "Draft",
+            UserId = Guid.Parse("6116088C-850F-4C38-A342-22CCE2071DC3")
+            // Reviewer = string.Empty
+        };
+
+
+        // Map page models to ContractorPerson entity. Fill only known fields; other DB columns will use defaults/nulls.
+        var person = new ContractorPerson
+        {
+            RequestId = request.RequestId,
+            FirstName = Demographics.FirstName,
+            PreferredFirstName = Demographics.PreferredFirstName,
+            LastName = Demographics.LastName,
+            PreferredLastName = Demographics.PreferredLastName,
+            PersonalEmail = Demographics.PersonalEmail,
+            CellPhone = Demographics.CellPhone,
+            DateOfBirth = Demographics.DateOfBirth,
+            Gender = Demographics.Gender,
+            AddressLine1 = Demographics.AddressLine1,
+            AddressLine2 = Demographics.AddressLine2,
+            City = Demographics.City,
+            StateProvince = Demographics.State,
+            PostalCode = Demographics.Postal,
+            CountryCode = Demographics.Country,
+            // JobTitle = JobInfo.JobTitle,
+            // Department = JobInfo.Department,
+            // StartDate = JobInfo.StartDate,
+            // PriorEmployeeFlag = JobInfo.PriorEmployeeFlag,
+            // ExternalEmployeeId = JobInfo.ExternalEmployeeId,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+            // set other properties as needed (CellPhone, Address, etc.)
+        };
+
+        Db.ContractorRequests.Add(request);
+        Db.ContractorPeople.Add(person);
+        await Db.SaveChangesAsync();
+        // Store the generated GUID for later reference (draft id)
+        SavedRequestId = request.RequestId;
+    }
+    catch (Exception ex)
+    {
+        // Surface a friendly error message and keep the page interactive
+        SubmitError = "Unable to submit request. " + ex.Message;
+    }
+    finally
+    {
+        StateHasChanged();
+    }
+
+}
+
+
+async Task SaveJobAndDates()
+{
+    try
+    {
+        if (SavedRequestId == Guid.Empty)
+        {
+            SubmitError = "No saved request id available to update.";
+            return;
+        }
+
+        var existing = await Db.ContractorPeople.FirstOrDefaultAsync(p => p.RequestId == SavedRequestId);
+
+        if (existing != null)
+        {
+            existing.JobTitle = JobInfo.JobTitle;
+            existing.Department = JobInfo.Department;
+            existing.StartDate = JobInfo.StartDate;
+            existing.PriorEmployeeFlag = JobInfo.PriorEmployeeFlag;
+            existing.ExternalEmployeeId = JobInfo.ExternalEmployeeId;
+            existing.UpdatedAt = DateTime.UtcNow;
+
+            await Db.SaveChangesAsync();
+        }
+        else
+        {
             var person = new ContractorPerson
             {
-                RequestId = request.RequestId,
-                FirstName = Demographics.FirstName,
-                PreferredFirstName = Demographics.PreferredFirstName,
-                LastName = Demographics.LastName,
-                PreferredLastName = Demographics.PreferredLastName,
-                PersonalEmail = Demographics.PersonalEmail,
-                CellPhone = Demographics.CellPhone,
-                DateOfBirth = Demographics.DateOfBirth,
-                Gender = Demographics.Gender,
-                AddressLine1 = Demographics.AddressLine1,
-                AddressLine2 = Demographics.AddressLine2,
-                City = Demographics.City,
-                StateProvince = Demographics.State,
-                PostalCode = Demographics.Postal,
-                CountryCode = Demographics.Country,
+                RequestId = SavedRequestId,
                 JobTitle = JobInfo.JobTitle,
                 Department = JobInfo.Department,
                 StartDate = JobInfo.StartDate,
@@ -193,12 +348,50 @@
                 ExternalEmployeeId = JobInfo.ExternalEmployeeId,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
-                // set other properties as needed (CellPhone, Address, etc.)
             };
+            Db.ContractorPeople.Add(person);
+            await Db.SaveChangesAsync();
+        }
+    }
+    catch (Exception ex)
+    {
+        SubmitError = "Unable to save job/dates. " + ex.Message;
+    }
+    finally
+    {
+        StateHasChanged();
+    }
+}
 
+
+async Task SaveHardware()
+{
+    try
+    {
+        if (SavedRequestId == Guid.Empty)
+        {
+            SubmitError = "No saved request id available to update.";
+            return;
+        }
+
+        var existing = await Db.ContractorHardwareRequest.FirstOrDefaultAsync(p => p.RequestId == SavedRequestId);
+
+        if (existing != null)
+        {
+            existing.NeedsLaptop = Hardware.NeedsLaptop;
+            existing.NeedsDock = Hardware.NeedsDock;
+            existing.MonitorCount = Hardware.MonitorCount;
+            existing.NeedsHeadset = Hardware.NeedsHeadset;
+            existing.NeedsHotspot = Hardware.NeedsHotspot;
+            existing.Notes = Hardware.Notes;
+            existing.UpdatedAt = DateTime.UtcNow;
+            await Db.SaveChangesAsync();
+        }
+        else
+        {
             var hardware = new ContractorHardwareRequest
             {
-                RequestId = request.RequestId,
+                RequestId = SavedRequestId,
                 NeedsLaptop = Hardware.NeedsLaptop,
                 NeedsDock = Hardware.NeedsDock,
                 MonitorCount = Hardware.MonitorCount,
@@ -208,79 +401,70 @@
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
             };
-
-            // Add both to the context. Fluent configuration ensures RequestId is the FK.
-            Db.ContractorRequests.Add(request);
-            Db.ContractorPeople.Add(person);
             Db.ContractorHardwareRequest.Add(hardware);
             await Db.SaveChangesAsync();
-
-            // Navigate to request details (assumes route exists: /onboarding/request/{id})
-            // Navigation.NavigateTo($"/onboarding/request/{request.RequestId}");
-            // Navigation.NavigateTo($"/admin/config/vendors");
-            Navigation.NavigateTo($"/");
-        }
-        catch (Exception ex)
-        {
-            // Surface a friendly error message and keep the page interactive
-            SubmitError = "Unable to submit request. " + ex.Message;
-        }
-        finally
-        {
-            IsSubmitting = false;
-            StateHasChanged();
         }
     }
-
-    public class DemographicsModel
+    catch (Exception ex)
     {
-        public string FirstName { get; set; } = string.Empty;
-        public string PreferredFirstName { get; set; } = string.Empty;
-        public string LastName  { get; set; } = string.Empty;
-        public string PreferredLastName { get; set; } = string.Empty;
-        public string PersonalEmail { get; set; } = string.Empty;
-        public string CellPhone { get; set; } = string.Empty;
-        public DateTime DateOfBirth { get; set; } = DateTime.Today;
-        public string Gender { get; set; } = string.Empty;
-        public string AddressLine1 { get; set; } = string.Empty;
-        public string AddressLine2 { get; set; } = string.Empty;
-        public string City { get; set; } = string.Empty;
-        public string State { get; set; } = string.Empty;
-        public string Postal { get; set; } = string.Empty;
-        public string Country { get; set; } = string.Empty;
-        public string Identity { get; set; } = string.Empty;
+        SubmitError = "Unable to save hardware. " + ex.Message;
     }
-
-    public class JobModel
+    finally
     {
-        public string AgencyName { get; set; } = string.Empty;
-        public string JobTitle { get; set; } = string.Empty;
-        public string JobCode { get; set; } = string.Empty;
-        public string Department { get; set; } = string.Empty;
-        public string ExternalEmployeeId { get; set; } = string.Empty;
-        public bool PriorEmployeeFlag { get; set; } = false;
-        public DateTime StartDate { get; set; } = DateTime.Today;
+        StateHasChanged();
     }
+}
 
-    public class AccessModel
-    {
-        public List<string> RequestedTargets { get; set; } = new();
-    }
 
-    public class HardwareModel
-    {
-        public bool NeedsLaptop { get; set; } = true;
-        public bool NeedsDock { get; set; } = true;
-        public int MonitorCount { get; set; } = 2;
-        public bool NeedsHeadset { get; set; } = true;
-        public bool NeedsHotspot { get; set; } = true;
-        public string Notes { get; set; } = string.Empty;
-    }
+public class DemographicsModel
+{
+    public string FirstName { get; set; } = string.Empty;
+    public string PreferredFirstName { get; set; } = string.Empty;
+    public string LastName { get; set; } = string.Empty;
+    public string PreferredLastName { get; set; } = string.Empty;
+    public string PersonalEmail { get; set; } = string.Empty;
+    public string CellPhone { get; set; } = string.Empty;
+    public DateTime DateOfBirth { get; set; } = DateTime.Today;
+    public string Gender { get; set; } = string.Empty;
+    public string AddressLine1 { get; set; } = string.Empty;
+    public string AddressLine2 { get; set; } = string.Empty;
+    public string City { get; set; } = string.Empty;
+    public string State { get; set; } = string.Empty;
+    public string Postal { get; set; } = string.Empty;
+    public string Country { get; set; } = string.Empty;
+    public string Identity { get; set; } = string.Empty;
+}
 
-    public class BadgeModel
-    {
-        public bool NeedsBadge { get; set; } = true;
-        public string PrimaryFacility { get; set; } = string.Empty;
-        public string RequestType { get; set; } = string.Empty;
-    }
+public class JobModel
+{
+    public string AgencyName { get; set; } = string.Empty;
+    public string JobTitle { get; set; } = string.Empty;
+    public string JobCode { get; set; } = string.Empty;
+    public string Department { get; set; } = string.Empty;
+    public string ExternalEmployeeId { get; set; } = string.Empty;
+    public bool PriorEmployeeFlag { get; set; } = false;
+    public DateTime StartDate { get; set; } = DateTime.Today;
+}
+
+public class AccessModel
+{
+    public List<string> RequestedTargets { get; set; } = new();
+}
+
+public class HardwareModel
+{
+    public bool NeedsLaptop { get; set; } = true;
+    public bool NeedsDock { get; set; } = true;
+    public int MonitorCount { get; set; } = 2;
+    public bool NeedsHeadset { get; set; } = true;
+    public bool NeedsHotspot { get; set; } = true;
+    public string Notes { get; set; } = string.Empty;
+}
+
+public class BadgeModel
+{
+    public bool NeedsBadge { get; set; } = true;
+    public string PrimaryFacility { get; set; } = string.Empty;
+    public string RequestType { get; set; } = string.Empty;
+}
 }
