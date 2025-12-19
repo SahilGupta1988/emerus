@@ -1,4 +1,10 @@
+@using Emerus.ETM.Admin.Data
 @using Emerus.ETM.Admin.Pages
+@using System.Data
+@using System.Data.Common
+@using System.Linq
+@using Microsoft.EntityFrameworkCore
+@inject AppDbContext Db
 @attribute [Authorize(Roles = "Approver,Requestor")]
 
 <div class="card-section">
@@ -11,7 +17,7 @@
             <select class="form-select" multiple style="min-height: 200px" @onchange="OnAdd">
                 @foreach (var target in AvailableTargets)
                 {
-                    <option value="@target">@target</option>
+                    <option value="@target.TargetId">@target.DisplayName</option>
                 }
             </select>
         </div>
@@ -21,11 +27,12 @@
         <div class="col-md-5">
             <label class="form-label">Requested Targets</label>
             <ul class="list-group">
-                @foreach (var t in Model.RequestedTargets)
+                @foreach (var rt in Model.RequestedTargets)
                 {
+                    var display = AvailableTargets.FirstOrDefault(a => a.TargetId == rt.TargetId)?.DisplayName ?? rt.TargetId.ToString();
                     <li class="list-group-item d-flex justify-content-between align-items-center">
-                        <span>@t</span>
-                        <button class="btn btn-sm btn-outline-danger" @onclick="() => Remove(t)">Remove</button>
+                        <span>@display</span>
+                        <button class="btn btn-sm btn-outline-danger" @onclick="() => Remove(rt.TargetId)">Remove</button>
                     </li>
                 }
             </ul>
@@ -37,30 +44,91 @@
     [Parameter]
     public OnboardingNew.AccessModel Model { get; set; } = default!;
 
-    private List<string> AvailableTargets = new()
+    private List<TargetCatalogModel> AvailableTargets { get; set; } = new();
+
+    protected override async Task OnInitializedAsync()
     {
-        "EPIC - Clinician",
-        "EPIC - Registration",
-        "Domain Group - NH-Shared-Drives",
-        "VPN Access",
-        "Email Account",
-        "Service Desk Portal"
-    };
+        await LoadAvailableTargetsAsync();
+    }
+
+    private async Task LoadAvailableTargetsAsync()
+    {
+        DbConnection? conn = null;
+        try
+        {
+            conn = Db.Database.GetDbConnection();
+            await conn.OpenAsync();
+
+            using var cmd = conn.CreateCommand();
+            // Query full rows (TargetId + DisplayName) from iam.TargetCatalog; restrict to active rows
+            cmd.CommandText = "SELECT TargetId, DisplayName FROM iam.TargetCatalog WHERE IsActive = 1 ORDER BY DisplayName";
+            using var reader = await cmd.ExecuteReaderAsync();
+
+            var list = new List<TargetCatalogModel>();
+            while (await reader.ReadAsync())
+            {
+                var item = new TargetCatalogModel();
+
+                if (!reader.IsDBNull(0))
+                {
+                    item.TargetId = reader.GetGuid(0);
+                }
+
+                if (!reader.IsDBNull(1))
+                {
+                    item.DisplayName = reader.GetString(1);
+                }
+
+                list.Add(item);
+            }
+
+            AvailableTargets = list;
+        }
+        catch (Exception)
+        {
+            // If DB call fails, do NOT populate sample values — leave the list empty so UI shows nothing
+            AvailableTargets = new List<TargetCatalogModel>();
+        }
+        finally
+        {
+            if (conn is not null && conn.State == ConnectionState.Open)
+            {
+                await conn.CloseAsync();
+            }
+
+            StateHasChanged();
+        }
+    }
 
     private void OnAdd(ChangeEventArgs e)
     {
-        // For mockup purposes, just add all available
+        // For mockup purposes, add all available targets as RequestTargetModel entries if not already present.
         foreach (var t in AvailableTargets)
         {
-            if (!Model.RequestedTargets.Contains(t))
+            if (!Model.RequestedTargets.Any(r => r.TargetId == t.TargetId))
             {
-                Model.RequestedTargets.Add(t);
+                Model.RequestedTargets.Add(new OnboardingNew.RequestTargetModel
+                {
+                    AccessRequestId = Guid.NewGuid(),
+                    RequestId = Guid.Empty,
+                    TargetId = t.TargetId
+                });
             }
         }
     }
 
-    private void Remove(string target)
+    private void Remove(Guid targetId)
     {
-        Model.RequestedTargets.Remove(target);
+        var existing = Model.RequestedTargets.FirstOrDefault(r => r.TargetId == targetId);
+        if (existing is not null)
+        {
+            Model.RequestedTargets.Remove(existing);
+        }
+    }
+
+    public class TargetCatalogModel
+    {
+        public Guid TargetId { get; set; }
+        public string DisplayName { get; set; } = string.Empty;
     }
 }

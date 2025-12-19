@@ -86,6 +86,8 @@
 </div>
 
 @code {
+
+
     private List<string> Steps = new()
     {
         "Demographics",
@@ -106,6 +108,9 @@
     private HardwareModel Hardware { get; set; } = new();
     private BadgeModel Badge { get; set; } = new();
 
+    // New: store the GUID generated when creating/saving a request (draft or final)
+    private Guid SavedRequestId { get; set; }
+
 
     void GoToStep(int i)
     {
@@ -115,10 +120,36 @@
         }
     }
 
-    void Next()
+    @using Microsoft.EntityFrameworkCore
+    async Task Next()
     {
         if (CurrentStepIndex < Steps.Count - 1)
         {
+            if (CurrentStepIndex == 0)
+            {
+                await SaveDemographicDetails();
+            }
+            if (CurrentStepIndex == 1)
+            {
+                await SaveJobAndDates();
+            }
+            if (CurrentStepIndex == 2)
+            {
+                await SaveAccessTargets();
+            }
+            if (CurrentStepIndex == 3)
+            {
+                await SaveHardware();
+            }
+            if (CurrentStepIndex == 4)
+            {
+                await SaveBadge();
+            }
+            if (CurrentStepIndex == 5)
+            {
+                // await SaveCompliance();
+            }
+
             CurrentStepIndex++;
             if (CurrentStepIndex > MaxStepIndex)
             {
@@ -126,6 +157,7 @@
             }
         }
     }
+
 
     void Previous()
     {
@@ -135,90 +167,61 @@
         }
     }
 
-    void SaveDraft()
+    async Task SaveDraft()
     {
-        // TODO: Hook up to backend
+        if (CurrentStepIndex == 0)
+        {
+            await SaveDemographicDetails();
+        }
+        if (CurrentStepIndex == 1)
+        {
+            await SaveJobAndDates();
+        }
+        if (CurrentStepIndex == 2)
+        {
+            await SaveAccessTargets();
+        }
+        if (CurrentStepIndex == 3)
+        {
+            await SaveHardware();
+        }
+        if (CurrentStepIndex == 4)
+        {
+            await SaveBadge();
+        }
+        if (CurrentStepIndex == 5)
+        {
+            // await SaveCompliance();
+        }
     }
 
     private bool IsSubmitting;
     private string? SubmitError;
 
-    async Task Submit()
+
+
+    void Submit()
     {
-        // TODO: Persist and redirect
         IsSubmitting = true;
         SubmitError = null;
 
         try
         {
-            // Create request id that will be used in routes/listing (MyContractors uses GUIDs)
-            // var requestId = Guid.NewGuid();
-
-            // Create the ContractorRequest entity and assign a GUID id.
-            var request = new ContractorRequest
+            if (SavedRequestId == Guid.Empty)
             {
-                RequestId = Guid.NewGuid(),
-                RequestedByUpn = $"{Demographics.FirstName} {Demographics.LastName}",
-                PartnerCode = "AGENCY1",
-                PrimaryFacility = Badge.PrimaryFacility,
-                RequestType = Badge.RequestType,
-                SubmittedAt = DateTime.UtcNow,//JobInfo.StartDate,
-                CreatedAt = DateTime.UtcNow,//JobInfo.StartDate,
-                Status = "New",
-                UserId = Guid.Parse("6116088C-850F-4C38-A342-22CCE2071DC3")
-                // Reviewer = string.Empty
-            };
+                SubmitError = "No saved request id available to update.";
+                return;
+            }
 
-            // Map page models to ContractorPerson entity. Fill only known fields; other DB columns will use defaults/nulls.
-            var person = new ContractorPerson
+            // Try to find an existing person for this request id
+            var existing = Db.ContractorRequests.FirstOrDefault(p => p.RequestId == SavedRequestId);
+
+            if (existing != null)
             {
-                RequestId = request.RequestId,
-                FirstName = Demographics.FirstName,
-                PreferredFirstName = Demographics.PreferredFirstName,
-                LastName = Demographics.LastName,
-                PreferredLastName = Demographics.PreferredLastName,
-                PersonalEmail = Demographics.PersonalEmail,
-                CellPhone = Demographics.CellPhone,
-                DateOfBirth = Demographics.DateOfBirth,
-                Gender = Demographics.Gender,
-                AddressLine1 = Demographics.AddressLine1,
-                AddressLine2 = Demographics.AddressLine2,
-                City = Demographics.City,
-                StateProvince = Demographics.State,
-                PostalCode = Demographics.Postal,
-                CountryCode = Demographics.Country,
-                JobTitle = JobInfo.JobTitle,
-                Department = JobInfo.Department,
-                StartDate = JobInfo.StartDate,
-                PriorEmployeeFlag = JobInfo.PriorEmployeeFlag,
-                ExternalEmployeeId = JobInfo.ExternalEmployeeId,
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow
-                // set other properties as needed (CellPhone, Address, etc.)
-            };
-
-            var hardware = new ContractorHardwareRequest
-            {
-                RequestId = request.RequestId,
-                NeedsLaptop = Hardware.NeedsLaptop,
-                NeedsDock = Hardware.NeedsDock,
-                MonitorCount = Hardware.MonitorCount,
-                NeedsHeadset = Hardware.NeedsHeadset,
-                NeedsHotspot = Hardware.NeedsHotspot,
-                Notes = Hardware.Notes,
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow
-            };
-
-            // Add both to the context. Fluent configuration ensures RequestId is the FK.
-            Db.ContractorRequests.Add(request);
-            Db.ContractorPeople.Add(person);
-            Db.ContractorHardwareRequest.Add(hardware);
-            await Db.SaveChangesAsync();
-
-            // Navigate to request details (assumes route exists: /onboarding/request/{id})
-            // Navigation.NavigateTo($"/onboarding/request/{request.RequestId}");
-            // Navigation.NavigateTo($"/admin/config/vendors");
+                existing.Status = "Submitted";
+                existing.SubmittedAt = DateTime.UtcNow;
+                Db.SaveChanges();
+            }
             Navigation.NavigateTo($"/");
         }
         catch (Exception ex)
@@ -233,11 +236,269 @@
         }
     }
 
+
+    async Task SaveDemographicDetails()
+    {
+        // Create the ContractorRequest entity and assign a GUID id.
+        try
+        {
+            var request = new ContractorRequest
+        {
+            RequestId = Guid.NewGuid(),
+            RequestedByUpn = $"{Demographics.FirstName} {Demographics.LastName}",
+            PartnerCode = "AGENCY1",
+            RequestType = "Requestor",
+            CreatedAt = DateTime.UtcNow,
+            Status = "Draft",
+            UserId = Guid.Parse("6116088C-850F-4C38-A342-22CCE2071DC3")
+                // Reviewer = string.Empty
+        };
+
+
+            // Map page models to ContractorPerson entity. Fill only known fields; other DB columns will use defaults/nulls.
+            var person = new ContractorPerson
+        {
+            RequestId = request.RequestId,
+            FirstName = Demographics.FirstName,
+            PreferredFirstName = Demographics.PreferredFirstName,
+            LastName = Demographics.LastName,
+            PreferredLastName = Demographics.PreferredLastName,
+            PersonalEmail = Demographics.PersonalEmail,
+            CellPhone = Demographics.CellPhone,
+            DateOfBirth = Demographics.DateOfBirth,
+            Gender = Demographics.Gender,
+            AddressLine1 = Demographics.AddressLine1,
+            AddressLine2 = Demographics.AddressLine2,
+            City = Demographics.City,
+            StateProvince = Demographics.State,
+            PostalCode = Demographics.Postal,
+            CountryCode = Demographics.Country,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+
+            Db.ContractorRequests.Add(request);
+            Db.ContractorPeople.Add(person);
+            await Db.SaveChangesAsync();
+            // Store the generated GUID for later reference (draft id)
+            SavedRequestId = request.RequestId;
+        }
+        catch (Exception ex)
+        {
+            // Surface a friendly error message and keep the page interactive
+            SubmitError = "Unable to submit request. " + ex.Message;
+        }
+        finally
+        {
+            StateHasChanged();
+        }
+
+    }
+
+
+    async Task SaveJobAndDates()
+    {
+        try
+        {
+            if (SavedRequestId == Guid.Empty)
+            {
+                SubmitError = "No saved request id available to update.";
+                return;
+            }
+
+            var existing = await Db.ContractorPeople.FirstOrDefaultAsync(p => p.RequestId == SavedRequestId);
+
+            if (existing != null)
+            {
+                existing.JobTitle = JobInfo.JobTitle;
+                existing.Department = JobInfo.Department;
+                existing.StartDate = JobInfo.StartDate;
+                existing.PriorEmployeeFlag = JobInfo.PriorEmployeeFlag;
+                existing.ExternalEmployeeId = JobInfo.ExternalEmployeeId;
+                existing.UpdatedAt = DateTime.UtcNow;
+
+                await Db.SaveChangesAsync();
+            }
+            else
+            {
+                var person = new ContractorPerson
+            {
+                RequestId = SavedRequestId,
+                JobTitle = JobInfo.JobTitle,
+                Department = JobInfo.Department,
+                StartDate = JobInfo.StartDate,
+                PriorEmployeeFlag = JobInfo.PriorEmployeeFlag,
+                ExternalEmployeeId = JobInfo.ExternalEmployeeId,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+                Db.ContractorPeople.Add(person);
+                await Db.SaveChangesAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            SubmitError = "Unable to save job/dates. " + ex.Message;
+        }
+        finally
+        {
+            StateHasChanged();
+        }
+    }
+
+
+
+    async Task SaveAccessTargets()
+    {
+        try
+        {
+            if (SavedRequestId == Guid.Empty)
+            {
+                SubmitError = "No saved request id available to update.";
+                return;
+            }
+
+            // Get a list of existing access records for this request id
+            var existingList = await Db.ContractorAccessRequest
+                                       .Where(p => p.RequestId == SavedRequestId)
+                                       .ToListAsync();
+
+            if (existingList.Any())
+            {
+                // If records exist then delete them before re-adding
+                Db.ContractorAccessRequest.RemoveRange(existingList);
+                await Db.SaveChangesAsync();
+            }
+
+            // Re-create access records — one per requested target.
+            // Adjust the property names below to match your ContractorAccessRequest entity.
+            foreach (var target in AccessInfo.RequestedTargets)
+            {
+                var access = new ContractorAccessRequest
+                {
+                    AccessRequestId = Guid.NewGuid(),
+                    RequestId = SavedRequestId,
+                    TargetId = target.TargetId,
+                    Environment = "Prod",
+                    CreatedAt = DateTime.UtcNow
+                };
+
+                Db.ContractorAccessRequest.Add(access);
+            }
+
+            await Db.SaveChangesAsync();
+        }
+        catch (Exception ex)
+        {
+            SubmitError = "Unable to save access targets. " + ex.Message;
+        }
+        finally
+        {
+            StateHasChanged();
+        }
+    }
+
+
+    async Task SaveHardware()
+    {
+        try
+        {
+            if (SavedRequestId == Guid.Empty)
+            {
+                SubmitError = "No saved request id available to update.";
+                return;
+            }
+
+            var existing = await Db.ContractorHardwareRequest.FirstOrDefaultAsync(p => p.RequestId == SavedRequestId);
+
+            if (existing != null)
+            {
+                existing.NeedsLaptop = Hardware.NeedsLaptop;
+                existing.NeedsDock = Hardware.NeedsDock;
+                existing.MonitorCount = Hardware.MonitorCount;
+                existing.NeedsHeadset = Hardware.NeedsHeadset;
+                existing.NeedsHotspot = Hardware.NeedsHotspot;
+                existing.Notes = Hardware.Notes;
+                existing.UpdatedAt = DateTime.UtcNow;
+                await Db.SaveChangesAsync();
+            }
+            else
+            {
+                var hardware = new ContractorHardwareRequest
+            {
+                RequestId = SavedRequestId,
+                NeedsLaptop = Hardware.NeedsLaptop,
+                NeedsDock = Hardware.NeedsDock,
+                MonitorCount = Hardware.MonitorCount,
+                NeedsHeadset = Hardware.NeedsHeadset,
+                NeedsHotspot = Hardware.NeedsHotspot,
+                Notes = Hardware.Notes,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+                Db.ContractorHardwareRequest.Add(hardware);
+                await Db.SaveChangesAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            SubmitError = "Unable to save hardware. " + ex.Message;
+        }
+        finally
+        {
+            StateHasChanged();
+        }
+    }
+
+
+    async Task SaveBadge()
+    {
+        try
+        {
+            if (SavedRequestId == Guid.Empty)
+            {
+                SubmitError = "No saved request id available to update.";
+                return;
+            }
+
+            var existing = await Db.ContractorRequests.FirstOrDefaultAsync(p => p.RequestId == SavedRequestId);
+
+            if (existing != null)
+            {
+
+                existing.PrimaryFacility = Badge.PrimaryFacility;
+                existing.RequestType = Badge.RequestType;
+                await Db.SaveChangesAsync();
+            }
+            else
+            {
+                var request = new ContractorRequest
+            {
+                RequestId = SavedRequestId,
+                PrimaryFacility = Badge.PrimaryFacility,
+                RequestType = Badge.RequestType,
+                CreatedAt = DateTime.UtcNow,
+            };
+                Db.ContractorRequests.Add(request);
+                await Db.SaveChangesAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            SubmitError = "Unable to save hardware. " + ex.Message;
+        }
+        finally
+        {
+            StateHasChanged();
+        }
+    }
+
+
     public class DemographicsModel
     {
         public string FirstName { get; set; } = string.Empty;
         public string PreferredFirstName { get; set; } = string.Empty;
-        public string LastName  { get; set; } = string.Empty;
+        public string LastName { get; set; } = string.Empty;
         public string PreferredLastName { get; set; } = string.Empty;
         public string PersonalEmail { get; set; } = string.Empty;
         public string CellPhone { get; set; } = string.Empty;
@@ -265,7 +526,20 @@
 
     public class AccessModel
     {
-        public List<string> RequestedTargets { get; set; } = new();
+        public List<RequestTargetModel> RequestedTargets { get; set; } = new();
+    }
+
+    public class RequestTargetModel
+    {
+        public Guid AccessRequestId { get; set; }
+        public Guid RequestId { get; set; }
+        public Guid TargetId { get; set; }
+        public string Environment { get; set; }
+        public string ChangeType { get; set; }
+        public string MirrorUserUpn { get; set; }
+        public string DetailJson { get; set; }
+        public DateTime CreatedAt { get; set; }
+        public string CreatedByUpn{ get; set; }
     }
 
     public class HardwareModel
@@ -277,7 +551,7 @@
         public bool NeedsHotspot { get; set; } = true;
         public string Notes { get; set; } = string.Empty;
     }
-
+    
     public class BadgeModel
     {
         public bool NeedsBadge { get; set; } = true;
