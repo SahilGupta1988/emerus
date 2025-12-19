@@ -1,4 +1,10 @@
+using Azure.Identity;
+using Azure.Security.KeyVault.Secrets;
 using Emerus.ETM.Admin.Data;
+using Emerus.ETM.Admin.Repositories;
+using Emerus.ETM.Admin.Repositories.Interfaces;
+using Emerus.ETM.Admin.Services;
+using Emerus.ETM.Admin.Services.Interfaces;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.EntityFrameworkCore;
@@ -25,11 +31,23 @@ builder.Services.Configure<OpenIdConnectOptions>(OpenIdConnectDefaults.Authentic
     options.TokenValidationParameters.RoleClaimType = "http://schemas.microsoft.com/ws/2008/06/identity/claims/role";
 });
 
+// Key Vault URL from configuration
+builder.Services.AddSingleton(sp =>
+{
+    var kvUrl = builder.Configuration["KeyVault:Url"];
+    return new SecretClient(new Uri(kvUrl), new DefaultAzureCredential());
+});
+
+
 builder.Services.AddAuthorization();
 
 builder.Services.AddRazorPages();
 builder.Services.AddServerSideBlazor().AddMicrosoftIdentityConsentHandler();
 builder.Services.AddControllersWithViews().AddMicrosoftIdentityUI();
+
+// Register application services and repositories
+builder.Services.AddScoped<IFileRepository, FileRepository>();
+builder.Services.AddScoped<IFileService, FileService>();
 
 var app = builder.Build();
 
