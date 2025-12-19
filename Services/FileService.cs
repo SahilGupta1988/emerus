@@ -26,8 +26,33 @@ namespace Emerus.ETM.Admin.Services
             if (result)
             {
                 var document = MapToContractorDocument(dto, uploadedBy, blobPath);
-                await _fileRepository.SaveDocumentAsync(document).ConfigureAwait(false);
+                await _fileRepository.SaveDocument(document).ConfigureAwait(false);
             }
+        }
+
+        public async Task<List<ContractorDocument>> GetDocumentByRequestIdAsync(Guid requestId)
+        {
+            if (requestId == Guid.Empty)
+                return new List<ContractorDocument>();
+
+            var results = await _fileRepository.GetDocumentsByRequestId(requestId).ConfigureAwait(false);
+            return results;
+        }
+
+        public async Task<bool> DeleteDocumentAsync(Guid documentId)
+        {
+            if (documentId == Guid.Empty)
+                return false;
+            var document = await _fileRepository.GetDocumentsByDocumentId(documentId).ConfigureAwait(false);
+            if(document == null || document.StorageUrl == null) return false;
+
+            var result = await _fileRepository.DeleteFileFromBlobByPath(document.StorageUrl).ConfigureAwait(false);
+            if (result)
+            {
+                document.Archived = true;
+                return await _fileRepository.UpdateDocument(document).ConfigureAwait(false);
+            }
+            return false;
         }
 
 

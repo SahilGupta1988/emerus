@@ -3,6 +3,9 @@ using Azure.Security.KeyVault.Secrets;
 using Azure.Storage.Blobs;
 using Emerus.ETM.Admin.Data;
 using Emerus.ETM.Admin.Repositories.Interfaces;
+using Microsoft.EntityFrameworkCore;
+using System.Reflection.Metadata;
+using System.Xml.Linq;
 
 namespace Emerus.ETM.Admin.Repositories
 {
@@ -26,10 +29,34 @@ namespace Emerus.ETM.Admin.Repositories
             return true;
         }
 
-        public async Task SaveDocumentAsync(ContractorDocument document)
+        public async Task SaveDocument(ContractorDocument document)
         {
             _context.ContractorDocument.Add(document);
             await _context.SaveChangesAsync();
+        }
+
+        public async Task<List<ContractorDocument>> GetDocumentsByRequestId(Guid requestId)
+        {
+            return await _context.ContractorDocument.Where(x => x.RequestId == requestId && x.Archived != true).AsNoTracking().ToListAsync().ConfigureAwait(false);
+        }
+
+        public async Task<ContractorDocument> GetDocumentsByDocumentId(Guid documentId)
+        {
+            return await _context.ContractorDocument.Where(x => x.DocumentId == documentId).AsNoTracking().FirstOrDefaultAsync().ConfigureAwait(false);
+        }
+
+        public async Task<bool> UpdateDocument(ContractorDocument document)
+        {
+            _context.ContractorDocument.Update(document);
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<bool> DeleteFileFromBlobByPath(string blobPath)
+        {
+            var blobClient = _container.GetBlobClient(blobPath);
+            var response = await blobClient.DeleteIfExistsAsync();
+            return response.Value;
         }
     }
 }
