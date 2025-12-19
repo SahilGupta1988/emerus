@@ -1,113 +1,250 @@
+@using Emerus.ETM.Admin.Data
 @using Emerus.ETM.Admin.Pages
+@using System.Text.RegularExpressions
+@using Microsoft.AspNetCore.Components.Forms
+
+<style>
+    /* make field-level validation messages obvious and consistent */
+    .field-validation {
+        color: #dc3545; /* Bootstrap danger red */
+        font-size: .875rem;
+        margin-top: .25rem;
+        display: block;
+    }
+
+    /* summary uses Bootstrap alert for strong visual feedback */
+    .validation-summary {
+        margin-bottom: 1rem;
+    }
+
+    /* small red asterisk spacing */
+    .required-asterisk {
+        color: #dc3545;
+        margin-left: .25rem;
+    }
+</style>
 
 <div class="card-section">
     <h5>Demographics</h5>
 
-    <!-- Name group -->
-    <div class="row g-3 mt-2">
-        <div class="col-md-6">
-            <label class="form-label">First Name</label>
-            <input class="form-control" @bind="Model.FirstName" />
+    <EditForm EditContext="editContext" OnValidSubmit="OnValidSubmit">
+        <DataAnnotationsValidator />
+        <ValidationSummary class="alert alert-danger validation-summary" />
+
+        <!-- Name group -->
+        <div class="row g-3 mt-2">
+            <div class="col-md-6">
+                <label class="form-label">First Name<span class="required-asterisk">*</span></label>
+                <InputText class="form-control" @bind-Value="Model.FirstName" />
+                <ValidationMessage For="@(() => Model.FirstName)" class="field-validation" />
+            </div>
+
+            <div class="col-md-6">
+                <label class="form-label">Last Name<span class="required-asterisk">*</span></label>
+                <InputText class="form-control" @bind-Value="Model.LastName" />
+                <ValidationMessage For="@(() => Model.LastName)" class="field-validation" />
+            </div>
         </div>
 
-        <div class="col-md-6">
-            <label class="form-label">Last Name</label>
-            <input class="form-control" @bind="Model.LastName" />
-        </div>
-    </div>
+        <div class="row g-3 mt-2">
+            <div class="col-md-6">
+                <label class="form-label">Preferred First Name</label>
+                <InputText class="form-control" @bind-Value="Model.PreferredFirstName" />
+                <ValidationMessage For="@(() => Model.PreferredFirstName)" class="field-validation" />
+            </div>
 
-    <div class="row g-3 mt-2">
-        <div class="col-md-6">
-            <label class="form-label">Preferred First Name</label>
-            <input class="form-control" @bind="Model.PreferredFirstName" />
-        </div>
-
-        <div class="col-md-6">
-            <label class="form-label">Preferred Last Name</label>
-            <input class="form-control" @bind="Model.PreferredLastName" />
-        </div>
-    </div>
-
-    <!-- Identity / DOB / Gender -->
-    <div class="row g-3 mt-3">
-        <div class="col-md-4">
-            <label class="form-label">Date of Birth</label>
-            <InputDate class="form-control" @bind-Value="Model.DateOfBirth" />
+            <div class="col-md-6">
+                <label class="form-label">Preferred Last Name</label>
+                <InputText class="form-control" @bind-Value="Model.PreferredLastName" />
+                <ValidationMessage For="@(() => Model.PreferredLastName)" class="field-validation" />
+            </div>
         </div>
 
-        <div class="col-md-4">
-            <label class="form-label">Gender</label>
-            <InputSelect class="form-select" @bind-Value="Model.Gender">
-                <option value="">Select gender</option>
-                <option value="Male">Male</option>
-                <option value="Female">Female</option>
-            </InputSelect>
+        <!-- Identity / DOB / Gender -->
+        <div class="row g-3 mt-3">
+            <div class="col-md-4">
+                <label class="form-label">Date of Birth<span class="required-asterisk">*</span></label>
+                <InputDate class="form-control" @bind-Value="Model.DateOfBirth" />
+                <ValidationMessage For="@(() => Model.DateOfBirth)" class="field-validation" />
+            </div>
+
+            <div class="col-md-4">
+                <label class="form-label">Gender</label>
+                <InputSelect class="form-select" @bind-Value="Model.Gender">
+                    <option value="">Select gender</option>
+                    <option value="Male">Male</option>
+                    <option value="Female">Female</option>
+                </InputSelect>
+                <ValidationMessage For="@(() => Model.Gender)" class="field-validation" />
+            </div>
+
+            <div class="col-md-4">
+                <label class="form-label">Identity</label>
+                <InputSelect class="form-select" @bind-Value="Model.Identity">
+                    <option value="">Select identity</option>
+                    <option value="SsnLast4">SsnLast4</option>
+                    <option value="FullSsnEncrypted">FullSsnEncrypted</option>
+                </InputSelect>
+                <ValidationMessage For="@(() => Model.Identity)" class="field-validation" />
+            </div>
         </div>
 
-        <div class="col-md-4">
-            <label class="form-label">Identity</label>
-            <InputSelect class="form-select" @bind-Value="Model.Identity">
-                <option value="">Select identity</option>
-                <option value="SsnLast4">SsnLast4</option>
-                <option value="FullSsnEncrypted">FullSsnEncrypted</option>
-            </InputSelect>
-        </div>
-    </div>
+        <!-- Contact group -->
+        <div class="row g-3 mt-3">
+            <div class="col-md-6">
+                <label class="form-label">Personal Email<span class="required-asterisk">*</span></label>
+                <InputText class="form-control" @bind-Value="Model.PersonalEmail" type="email" />
+                <ValidationMessage For="@(() => Model.PersonalEmail)" class="field-validation" />
+            </div>
 
-    <!-- Contact group -->
-    <div class="row g-3 mt-3">
-        <div class="col-md-6">
-            <label class="form-label">Personal Email</label>
-            <input class="form-control" @bind="Model.PersonalEmail" type="email" />
+            <div class="col-md-6">
+                <label class="form-label">Cell Phone</label>
+                <InputText class="form-control" @bind-Value="Model.CellPhone" type="tel" />
+                <ValidationMessage For="@(() => Model.CellPhone)" class="field-validation" />
+            </div>
         </div>
 
-        <div class="col-md-6">
-            <label class="form-label">Cell Phone</label>
-            <input class="form-control" @bind="Model.CellPhone" type="tel" />
-        </div>
-    </div>
-
-    <!-- Address block -->
-    <div class="row g-3 mt-3">
-        <div class="col-12">
-            <label class="form-label">Address Line 1</label>
-            <input class="form-control" @bind="Model.AddressLine1" />
-        </div>
-    </div>
-
-    <div class="row g-3 mt-2">
-        <div class="col-12">
-            <label class="form-label">Address Line 2</label>
-            <input class="form-control" @bind="Model.AddressLine2" />
-        </div>
-    </div>
-
-    <div class="row g-3 mt-2">
-        <div class="col-md-5">
-            <label class="form-label">City</label>
-            <input class="form-control" @bind="Model.City" />
+        <!-- Address block -->
+        <div class="row g-3 mt-3">
+            <div class="col-12">
+                <label class="form-label">Address Line 1</label>
+                <InputText class="form-control" @bind-Value="Model.AddressLine1" />
+                <ValidationMessage For="@(() => Model.AddressLine1)" class="field-validation" />
+            </div>
         </div>
 
-        <div class="col-md-4">
-            <label class="form-label">State</label>
-            <input class="form-control" @bind="Model.State" />
+        <div class="row g-3 mt-2">
+            <div class="col-12">
+                <label class="form-label">Address Line 2</label>
+                <InputText class="form-control" @bind-Value="Model.AddressLine2" />
+                <ValidationMessage For="@(() => Model.AddressLine2)" class="field-validation" />
+            </div>
         </div>
 
-        <div class="col-md-3">
-            <label class="form-label">Postal</label>
-            <input class="form-control" @bind="Model.Postal" />
-        </div>
-    </div>
+        <div class="row g-3 mt-2">
+            <div class="col-md-5">
+                <label class="form-label">City<span class="required-asterisk">*</span></label>
+                <InputText class="form-control" @bind-Value="Model.City" />
+                <ValidationMessage For="@(() => Model.City)" class="field-validation" />
+            </div>
 
-    <div class="row g-3 mt-3">
-        <div class="col-md-4">
-            <label class="form-label">Country</label>
-            <input class="form-control" @bind="Model.Country" />
+            <div class="col-md-4">
+                <label class="form-label">State<span class="required-asterisk">*</span></label>
+                <InputText class="form-control" @bind-Value="Model.StateProvince" />
+                <ValidationMessage For="@(() => Model.StateProvince)" class="field-validation" />
+            </div>
+
+            <div class="col-md-3">
+                <label class="form-label">Postal</label>
+                <InputText class="form-control" @bind-Value="Model.PostalCode" />
+                <ValidationMessage For="@(() => Model.PostalCode)" class="field-validation" />
+            </div>
         </div>
-    </div>
+
+        <div class="row g-3 mt-3">
+            <div class="col-md-4">
+                <label class="form-label">Country<span class="required-asterisk">*</span></label>
+                <InputText class="form-control" @bind-Value="Model.CountryCode" maxlength="2" />
+                <ValidationMessage For="@(() => Model.CountryCode)" class="field-validation" />
+            </div>
+        </div>
+    </EditForm>
 </div>
 
 @code {
     [Parameter]
     public OnboardingNew.DemographicsModel Model { get; set; } = default!;
+
+
+    private EditContext? editContext;
+    private ValidationMessageStore? messageStore;
+
+    protected override void OnInitialized()
+    {
+        if (Model is null)
+        {
+            Model = new OnboardingNew.DemographicsModel();
+        }
+
+        editContext = new EditContext(Model);
+        messageStore = new ValidationMessageStore(editContext);
+
+        // Validate on field change so messages appear as user types
+        editContext.OnFieldChanged += (_, __) => ValidateModel();
+        ValidateModel();
+    }
+
+    private void OnValidSubmit()
+    {
+        // placeholder - submission handled by parent flow
+    }
+
+    private void ValidateModel()
+    {
+        if (editContext is null || messageStore is null) return;
+
+        messageStore.Clear();
+
+        // Required fields
+        if (string.IsNullOrWhiteSpace(Model.FirstName))
+        {
+            messageStore.Add(editContext.Field(nameof(Model.FirstName)), "First name is required.");
+        }
+
+        if (string.IsNullOrWhiteSpace(Model.LastName))
+        {
+            messageStore.Add(editContext.Field(nameof(Model.LastName)), "Last name is required.");
+        }
+
+        if (string.IsNullOrWhiteSpace(Model.PersonalEmail))
+        {
+            messageStore.Add(editContext.Field(nameof(Model.PersonalEmail)), "Personal email is required.");
+        }
+        else
+        {
+            try
+            {
+                var addr = new System.Net.Mail.MailAddress(Model.PersonalEmail);
+                if (addr.Address != Model.PersonalEmail)
+                {
+                    messageStore.Add(editContext.Field(nameof(Model.PersonalEmail)), "Email address is invalid.");
+                }
+            }
+            catch
+            {
+                messageStore.Add(editContext.Field(nameof(Model.PersonalEmail)), "Email address is invalid.");
+            }
+        }
+
+        if (Model.DateOfBirth == default)
+        {
+            messageStore.Add(editContext.Field(nameof(Model.DateOfBirth)), "Date of birth is required.");
+        }
+        else if (Model.DateOfBirth > DateTime.Today)
+        {
+            messageStore.Add(editContext.Field(nameof(Model.DateOfBirth)), "Date of birth cannot be in the future.");
+        }
+
+        if (string.IsNullOrWhiteSpace(Model.City))
+        {
+            messageStore.Add(editContext.Field(nameof(Model.City)), "City is required.");
+        }
+
+        if (string.IsNullOrWhiteSpace(Model.StateProvince))
+        {
+            messageStore.Add(editContext.Field(nameof(Model.StateProvince)), "State is required.");
+        }
+
+        // Country: required + maximum 2 characters
+        if (string.IsNullOrWhiteSpace(Model.CountryCode))
+        {
+            messageStore.Add(editContext.Field(nameof(Model.CountryCode)), "Country is required.");
+        }
+        else if (Model.CountryCode.Length > 2)
+        {
+            messageStore.Add(editContext.Field(nameof(Model.CountryCode)), "Country must be at most 2 characters (ISO code).");
+        }
+
+        editContext.NotifyValidationStateChanged();
+    }
 }
