@@ -3,41 +3,33 @@
 <div class="card-section">
     <h5>Demographics</h5>
 
-    <div class="row g-3">
-        <div class="col-md-4">
+    <!-- Name group -->
+    <div class="row g-3 mt-2">
+        <div class="col-md-6">
             <label class="form-label">First Name</label>
             <input class="form-control" @bind="Model.FirstName" />
         </div>
 
-        <div class="col-md-4">
-            <label class="form-label">Preferred First Name</label>
-            <input class="form-control" @bind="Model.PreferredFirstName" />
-        </div>
-
-        <div class="col-md-4">
+        <div class="col-md-6">
             <label class="form-label">Last Name</label>
             <input class="form-control" @bind="Model.LastName" />
         </div>
     </div>
 
     <div class="row g-3 mt-2">
-        <div class="col-md-4">
+        <div class="col-md-6">
+            <label class="form-label">Preferred First Name</label>
+            <input class="form-control" @bind="Model.PreferredFirstName" />
+        </div>
+
+        <div class="col-md-6">
             <label class="form-label">Preferred Last Name</label>
             <input class="form-control" @bind="Model.PreferredLastName" />
         </div>
-
-        <div class="col-md-4">
-            <label class="form-label">Personal Email</label>
-            <input class="form-control" @bind="Model.PersonalEmail" type="email" />
-        </div>
-
-        <div class="col-md-4">
-            <label class="form-label">Cell Phone</label>
-            <input class="form-control" @bind="Model.CellPhone" type="tel" />
-        </div>
     </div>
 
-    <div class="row g-3 mt-2">
+    <!-- Identity / DOB / Gender -->
+    <div class="row g-3 mt-3">
         <div class="col-md-4">
             <label class="form-label">Date of Birth</label>
             <InputDate class="form-control" @bind-Value="Model.DateOfBirth" />
@@ -62,20 +54,36 @@
         </div>
     </div>
 
-    <div class="row g-3 mt-2">
+    <!-- Contact group -->
+    <div class="row g-3 mt-3">
         <div class="col-md-6">
-            <label class="form-label">Address Line 1</label>
-            <input class="form-control" @bind="Model.AddressLine1" />
+            <label class="form-label">Personal Email</label>
+            <input class="form-control" @bind="Model.PersonalEmail" type="email" />
         </div>
 
         <div class="col-md-6">
+            <label class="form-label">Cell Phone</label>
+            <input class="form-control" @bind="Model.CellPhone" type="tel" />
+        </div>
+    </div>
+
+    <!-- Address block -->
+    <div class="row g-3 mt-3">
+        <div class="col-12">
+            <label class="form-label">Address Line 1</label>
+            <input class="form-control" @bind="Model.AddressLine1" />
+        </div>
+    </div>
+
+    <div class="row g-3 mt-2">
+        <div class="col-12">
             <label class="form-label">Address Line 2</label>
             <input class="form-control" @bind="Model.AddressLine2" />
         </div>
     </div>
 
     <div class="row g-3 mt-2">
-        <div class="col-md-4">
+        <div class="col-md-5">
             <label class="form-label">City</label>
             <input class="form-control" @bind="Model.City" />
         </div>
@@ -85,13 +93,13 @@
             <input class="form-control" @bind="Model.State" />
         </div>
 
-        <div class="col-md-4">
+        <div class="col-md-3">
             <label class="form-label">Postal</label>
             <input class="form-control" @bind="Model.Postal" />
         </div>
     </div>
 
-    <div class="row g-3 mt-2">
+    <div class="row g-3 mt-3">
         <div class="col-md-4">
             <label class="form-label">Country</label>
             <input class="form-control" @bind="Model.Country" />

@@ -4,39 +4,58 @@
     <h5>Hardware</h5>
 
     <div class="row g-3">
-        <div class="col-md-4">
-            <div class="form-check">
-                <input class="form-check-input" type="checkbox" id="NeedsLaptop" @bind="Model.NeedsLaptop" />
-                <label class="form-check-label" for="NeedsLaptop">Needs Laptop</label>
+        <!-- Options: grouped and displayed as switches for clarity -->
+        <div class="col-md-8">
+            <label class="form-label">Requested Hardware</label>
+
+            <div class="row g-2">
+                <div class="col-6">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="NeedsLaptop" @bind="Model.NeedsLaptop" />
+                        <label class="form-check-label" for="NeedsLaptop">Laptop</label>
+                    </div>
+                </div>
+
+                <div class="col-6">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="NeedsDock" @bind="Model.NeedsDock" />
+                        <label class="form-check-label" for="NeedsDock">Docking Station</label>
+                    </div>
+                </div>
+
+                <div class="col-6">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="NeedsHeadset" @bind="Model.NeedsHeadset" />
+                        <label class="form-check-label" for="NeedsHeadset">Headset</label>
+                    </div>
+                </div>
+
+                <div class="col-6">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="NeedsHotspot" @bind="Model.NeedsHotspot" />
+                        <label class="form-check-label" for="NeedsHotspot">Hot Spot</label>
+                    </div>
+                </div>
             </div>
         </div>
+
+        <!-- Counts and notes: placed to the right so user sees totals/notes while selecting items -->
         <div class="col-md-4">
-            <div class="form-check">
-                <input class="form-check-input" type="checkbox" id="NeedsDock" @bind="Model.NeedsDock" />
-                <label class="form-check-label" for="NeedsDock">Needs Docking Station</label>
+            <div class="mb-3">
+                <label class="form-label">Monitor Count</label>
+                <select class="form-select" @bind="Model.MonitorCount">
+                    <option value="0">0</option>
+                    <option value="1">1</option>
+                    <option value="2">2</option>
+                    <option value="3">3</option>
+                    <option value="4">4</option>
+                </select>
             </div>
-        </div>
-        <div class="col-md-4">
-            <label class="form-label">Monitor Count</label>
-            <input class="form-control" type="number" min="0" max="4" @bind="Model.MonitorCount" />
-        </div>
-    </div>
-    <div class="row g-3">
-        <div class="col-md-4">
-            <div class="form-check">
-                <input class="form-check-input" type="checkbox" id="NeedsHeadset" @bind="Model.NeedsHeadset" />
-                <label class="form-check-label" for="NeedsLaptop">Needs Headset</label>
+
+            <div>
+                <label class="form-label">Notes</label>
+                <textarea class="form-control" rows="5" @bind="Model.Notes" placeholder="Special requests, laptop specs, or delivery notes..."></textarea>
             </div>
-        </div>
-        <div class="col-md-4">
-            <div class="form-check">
-                <input class="form-check-input" type="checkbox" id="NeedsHotSpot" @bind="Model.NeedsHotspot" />
-                <label class="form-check-label" for="NeedsDock">Needs Hot Spot</label>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <label class="form-label">Notes</label>
-            <input class="form-control" type="number" min="0" max="4" @bind="Model.Notes" />
         </div>
     </div>
 </div>
