@@ -1,4 +1,6 @@
 @using Emerus.ETM.Admin.Pages
+@using System.Linq
+
 
 <div class="card-section">
     <h5>Review</h5>
@@ -73,9 +75,10 @@
                     @* Render a sensible summary for the requested target. Show TargetId if no display name is available. *@
                     @if (rt is not null)
                     {
+                        var displayname = TargetCatalog?.FirstOrDefault(t => t.TargetId == rt.TargetId)?.DisplayName;
                         <div class="d-flex justify-content-between">
-                            <div>Target: @rt.TargetId</div>
-                            <small class="text-muted">RequestId: @rt.RequestId</small>
+                            <div>Target: @(displayname ?? rt.TargetId.ToString())</div>
+                            @* <small class="text-muted">RequestId: @rt.RequestId</small> *@
                         </div>
                     }
                 </li>
@@ -102,7 +105,7 @@
         <dd class="col-md-9">@((Hardware.NeedsHotspot) ? "Yes" : "No")</dd>
 
         <dt class="col-md-3">Notes</dt>
-        <dd class="col-md-9">@(!string.IsNullOrWhiteSpace(Hardware.Notes) ? Hardware.Notes : "<span class=\"text-muted\">None</span>")</dd>
+        <dd class="col-md-9">@(!string.IsNullOrWhiteSpace(Hardware.Notes) ? Hardware.Notes : "None")</dd>
     </dl>
 
     <!-- Badge -->
@@ -128,6 +131,10 @@
 
     [Parameter]
     public OnboardingNew.AccessModel AccessInfo { get; set; } = default!;
+
+    // Fixed: TargetCatalog is a collection of TargetCatalogModel (defined in AccessStep)
+    [Parameter]
+    public List<AccessStep.TargetCatalogModel> TargetCatalog { get; set; } = new();
 
     [Parameter]
     public OnboardingNew.HardwareModel Hardware { get; set; } = default!;

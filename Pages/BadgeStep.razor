@@ -1,40 +1,110 @@
 @using Emerus.ETM.Admin.Pages
+@using Microsoft.AspNetCore.Components.Forms
+
+<style>
+    .required-asterisk {
+        color: #dc3545;
+        margin-left: .25rem;
+    }
+
+    .field-validation {
+        color: #dc3545;
+        font-size: .875rem;
+        margin-top: .25rem;
+        display: block;
+    }
+</style>
 
 <div class="card-section">
     <h5>Badge Request</h5>
 
-    <div class="form-check form-switch mb-2">
-        <input class="form-check-input" type="checkbox" id="NeedsBadge" @bind="Model.NeedsBadge" />
-        <label class="form-check-label" for="NeedsBadge">Request building access badge</label>
-    </div>
+    <EditForm EditContext="editContext" OnValidSubmit="OnValidSubmit">
+        <DataAnnotationsValidator />
+        <ValidationSummary class="alert alert-danger" />
 
-    <p class="text-muted small mb-3">
-        Toggle to request a physical badge. When disabled, facility and access level are read-only.
-    </p>
-
-    <div class="row g-3">
-        <div class="col-md-6">
-            <label class="form-label" for="PrimaryFacility">Facility</label>
-            <input id="PrimaryFacility"
-                   class="form-control"
-                   placeholder="Primary facility or campus"
-                   @bind="Model.PrimaryFacility"
-                   disabled="@(Model.NeedsBadge == false)" />
+        <div class="form-check form-switch mb-2">
+            <input class="form-check-input" type="checkbox" id="NeedsBadge" @bind="Model.NeedsBadge" />
+            <label class="form-check-label" for="NeedsBadge">Request building access badge</label>
         </div>
 
-        <div class="col-md-6">
-            <label class="form-label" for="RequestType">Access Level / Request Type</label>
-            <InputSelect id="RequestType" class="form-select" @bind-Value="Model.RequestType" disabled="@(Model.NeedsBadge == false)">
-                <option value="">Select access level</option>
-                <option value="Contingent">Contingent</option>
-                <option value="Clinician">Clinician</option>
-                <option value="Vendor">Vendor</option>
-            </InputSelect>
+        <p class="text-muted small mb-3">
+            Toggle to request a physical badge. When disabled, facility and access level are read-only.
+        </p>
+
+        <div class="row g-3">
+            <div class="col-md-6">
+                <label class="form-label" for="PrimaryFacility">Facility</label>
+                <input id="PrimaryFacility"
+                       class="form-control"
+                       placeholder="Primary facility or campus"
+                       @bind="Model.PrimaryFacility"
+                       disabled="@(Model.NeedsBadge == false)" />
+            </div>
+
+            <div class="col-md-6">
+                <label class="form-label" for="RequestType">
+                    Access Level / Request Type
+                    <span class="required-asterisk">*</span>
+                </label>
+
+                <InputSelect id="RequestType"
+                             class="form-select"
+                             @bind-Value="Model.RequestType"
+                             disabled="@(Model.NeedsBadge == false)">
+                    <option value="">Select access level</option>
+                    <option value="Contingent">Contingent</option>
+                    <option value="Clinician">Clinician</option>
+                    <option value="Vendor">Vendor</option>
+                </InputSelect>
+
+                <ValidationMessage For="@(() => Model.RequestType)" class="field-validation" />
+            </div>
         </div>
-    </div>
+    </EditForm>
 </div>
 
 @code {
     [Parameter]
     public OnboardingNew.BadgeModel Model { get; set; } = default!;
+
+    private EditContext? editContext;
+    private ValidationMessageStore? messageStore;
+
+    protected override void OnInitialized()
+    {
+        if (Model is null)
+        {
+            Model = new OnboardingNew.BadgeModel();
+        }
+
+        editContext = new EditContext(Model);
+        messageStore = new ValidationMessageStore(editContext);
+
+        // Re-validate whenever any field changes so the message for RequestType appears immediately
+        editContext.OnFieldChanged += (_, __) => ValidateModel();
+        ValidateModel();
+    }
+
+    private void OnValidSubmit()
+    {
+        // No-op: actual flow is controlled by parent page
+    }
+
+    private void ValidateModel()
+    {
+        if (editContext is null || messageStore is null) return;
+
+        messageStore.Clear();
+
+        // If user requests a badge, RequestType must be selected
+        if (Model.NeedsBadge)
+        {
+            if (string.IsNullOrWhiteSpace(Model.RequestType))
+            {
+                messageStore.Add(editContext.Field(nameof(Model.RequestType)), "Access level / request type is required when requesting a badge.");
+            }
+        }
+
+        editContext.NotifyValidationStateChanged();
+    }
 }

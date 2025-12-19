@@ -426,6 +426,26 @@
     {
         SubmitError = null;
 
+        // Require at least one selected target before attempting DB work
+        if (AccessInfo?.RequestedTargets == null || !AccessInfo.RequestedTargets.Any())
+        {
+            SubmitError = "Please select at least one access target.";
+            try
+            {
+                if (JS is not null)
+                {
+                    await JS.InvokeVoidAsync("alert", SubmitError);
+                }
+            }
+            catch
+            {
+                // ignore JS interop failures; SubmitError will still render on the page
+            }
+
+            StateHasChanged();
+            return false;
+        }
+
         try
         {
             if (SavedRequestId == Guid.Empty)
@@ -531,6 +551,26 @@
     async Task<bool> SaveBadge()
     {
         SubmitError = null;
+
+        // If badge is requested require RequestType
+        if (Badge?.NeedsBadge == true && string.IsNullOrWhiteSpace(Badge.RequestType))
+        {
+            SubmitError = "Please select an Access Level / Request Type before continuing.";
+            try
+            {
+                if (JS is not null)
+                {
+                    await JS.InvokeVoidAsync("alert", SubmitError);
+                }
+            }
+            catch
+            {
+                // ignore JS interop errors
+            }
+
+            StateHasChanged();
+            return false;
+        }
 
         try
         {
@@ -691,10 +731,17 @@
         public string Notes { get; set; } = string.Empty;
     }
 
-    public class BadgeModel
+    public class BadgeModel : IValidatableObject
     {
         public bool NeedsBadge { get; set; } = true;
         public string PrimaryFacility { get; set; } = string.Empty;
+        [Required(ErrorMessage = "Request Type is required.")]
         public string RequestType { get; set; } = string.Empty;
+
+        public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+        {
+            var results = new List<ValidationResult>();
+            return results;
+        }
     }
 }
