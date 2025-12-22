@@ -6,64 +6,78 @@
 
 <PageTitle>Dashboard</PageTitle>
 
-<div class="page-header">
-    <h2>Onboarding Dashboard</h2>
-    <p class="text-muted">High level view of contractor onboarding activity.</p>
+<div class="page-header d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-3">
+    <div>
+        <h2 class="mb-0">Onboarding Dashboard</h2>
+        <p class="text-muted mb-0">High level view of contractor onboarding activity.</p>
+    </div>
+
+    <div class="d-flex gap-2 mt-3 mt-md-0 align-items-center">
+        <div class="input-group input-group-sm">
+            <span class="input-group-text">Search</span>
+            <input class="form-control" placeholder="Contractor, vendor, facility or status" @bind="SearchText" @bind:event="oninput" />
+        </div>
+
+        <a class="btn btn-sm btn-primary" href="onboarding/new">New Contractor</a>
+    </div>
 </div>
 
 <div class="row g-3 mb-4">
-    <div class="col-md-3">
+    <div class="col-6 col-md-3">
         <div class="card kpi-card">
             <div class="card-body">
                 <div class="kpi-label">Open Requests</div>
-                <div class="kpi-value">12</div>
+                <div class="kpi-value">@OpenRequestsCount</div>
                 <div class="kpi-footnote">Submitted and in progress</div>
             </div>
         </div>
     </div>
-    <div class="col-md-3">
+    <div class="col-6 col-md-3">
         <div class="card kpi-card">
             <div class="card-body">
                 <div class="kpi-label">Completed This Week</div>
-                <div class="kpi-value">4</div>
+                <div class="kpi-value">@CompletedThisWeekCount</div>
                 <div class="kpi-footnote">Provisioning done</div>
             </div>
         </div>
     </div>
-    <div class="col-md-3">
+    <div class="col-6 col-md-3">
         <div class="card kpi-card">
             <div class="card-body">
                 <div class="kpi-label">Pending Vendor Action</div>
-                <div class="kpi-value">3</div>
+                <div class="kpi-value">@PendingVendorActionCount</div>
                 <div class="kpi-footnote">Missing documents</div>
             </div>
         </div>
     </div>
-    <div class="col-md-3">
+    <div class="col-6 col-md-3">
         <div class="card kpi-card">
             <div class="card-body">
                 <div class="kpi-label">Tasks Due Today</div>
-                <div class="kpi-value">7</div>
+                <div class="kpi-value">@TasksDueTodayCount</div>
                 <div class="kpi-footnote">Across all facilities</div>
             </div>
         </div>
     </div>
 </div>
 
-
-<select id="ddlRole">
-    <option>Requestor</option>
-    <option>Approver</option>
-</select>
-<br />
-<div id="card2" class="card">
+<div class="card">
     <div class="card-header d-flex justify-content-between align-items-center">
         <span>Recent Contractor Requests</span>
-        <a class="btn btn-sm btn-primary" href="onboarding/new">New Contractor</a>
+
+        <div class="d-flex align-items-center gap-2">
+            <small class="text-muted">Showing @FilteredCount of @MockData.Count</small>
+            <div class="btn-group btn-group-sm" role="group" aria-label="page size">
+                <button class="btn btn-outline-secondary" @onclick="() => SetPageSize(10)" title="10 rows">10</button>
+                <button class="btn btn-outline-secondary" @onclick="() => SetPageSize(25)" title="25 rows">25</button>
+                <button class="btn btn-outline-secondary" @onclick="() => SetPageSize(50)" title="50 rows">50</button>
+            </div>
+        </div>
     </div>
+
     <div class="card-body p-0 card-table-wrapper">
-        <table class="table table-striped">
-            <thead>
+        <table class="table table-striped mb-0">
+            <thead class="table-light">
                 <tr>
                     <th>Contractor</th>
                     <th>Vendor</th>
@@ -74,30 +88,91 @@
                 </tr>
             </thead>
             <tbody>
-                @foreach (var row in MockData)
+                @if (!PagedRows.Any())
                 {
                     <tr>
-                        <td>@row.ContractorName</td>
-                        <td>@row.VendorName</td>
-                        <td>@row.Facility</td>
-                        <td>@row.StartDate.ToShortDateString()</td>
-                        <td><span class="badge @GetStatusBadgeClass(row.Status)">@row.Status</span></td>
-                        <td class="text-end">
-                            <a href="onboarding/request/@row.Id" class="btn btn-sm btn-outline-secondary">View</a>
+                        <td colspan="6" class="text-center p-4">
+                            <div class="text-muted">No matching requests found.</div>
                         </td>
                     </tr>
+                }
+                else
+                {
+                    @foreach (var row in PagedRows)
+                    {
+                        <tr>
+                            <td>@row.ContractorName</td>
+                            <td>@row.VendorName</td>
+                            <td>@row.Facility</td>
+                            <td>@row.StartDate.ToShortDateString()</td>
+                            <td><span class="badge @GetStatusBadgeClass(row.Status)">@row.Status</span></td>
+                            <td class="text-end">
+                                <a href="onboarding/request/@row.Id" class="btn btn-sm btn-outline-secondary">View</a>
+                            </td>
+                        </tr>
+                    }
                 }
             </tbody>
         </table>
     </div>
+
+    <div class="card-footer d-flex justify-content-between align-items-center">
+        <div>
+            <small class="text-muted">Page @CurrentPage of @TotalPages</small>
+        </div>
+
+        <div class="btn-group">
+            <button class="btn btn-sm btn-outline-secondary" @onclick="PrevPage" disabled="@(CurrentPage == 1)">Previous</button>
+            <button class="btn btn-sm btn-outline-secondary" @onclick="NextPage" disabled="@(CurrentPage == TotalPages)">Next</button>
+        </div>
+    </div>
 </div>
 
-@code {
-    public record DashboardRow(Guid Id, string ContractorName, string VendorName, string Facility, DateTime StartDate, string Status);
+<style>
+    .kpi-card {
+        border-radius: 8px;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    }
 
+    .kpi-label {
+        font-size: .85rem;
+        color: #6c757d;
+    }
+
+    .kpi-value {
+        font-size: 1.6rem;
+        font-weight: 700;
+        margin-top: .25rem;
+    }
+
+    .kpi-footnote {
+        font-size: .8rem;
+        color: #6c757d;
+        margin-top: .25rem;
+    }
+
+    .card-table-wrapper {
+        max-height: 56vh;
+        overflow: auto;
+    }
+
+    /* make status badges a little taller */
+    .badge {
+        padding: .45rem .6rem;
+        font-size: .85rem;
+    }
+</style>
+
+@code {
+    public record DashboardRow(Guid Id, string ContractorName, string VendorName, string Facility, DateTime StartDate, string Status, DateTime CreatedAt);
 
     // populated from database on initialization
     private List<DashboardRow> MockData { get; set; } = new();
+
+    // UI state
+    private string SearchText { get; set; } = string.Empty;
+    private int PageSize { get; set; } = 10;
+    private int CurrentPage { get; set; } = 1;
 
     protected override async Task OnInitializedAsync()
     {
@@ -107,22 +182,18 @@
             .Include(r => r.ContractorPerson)
             .Include(r => r.Partner)
             .OrderByDescending(r => r.CreatedAt)
-            // .Take(10)
             .Select(r => new DashboardRow(
                 r.RequestId,
-                // Contractor name: prefer PreferredFirstName when present, else FirstName; include LastName when available.
                 (r.ContractorPerson != null
                     ? ((string.IsNullOrWhiteSpace(r.ContractorPerson.PreferredFirstName) ? r.ContractorPerson.FirstName : r.ContractorPerson.PreferredFirstName) + " " + r.ContractorPerson.LastName)
                     : "Unknown"),
-                // Vendor/Partner display name
                 (r.Partner != null ? r.Partner.DisplayName : "Unknown"),
-                // Facility with fallback
                 (r.PrimaryFacility ?? string.Empty),
-                // StartDate: prefer ContractorPerson.StartDate, otherwise fall back to CreatedAt
                 (r.ContractorPerson != null
                     ? (r.ContractorPerson.StartDate ?? r.CreatedAt)
                     : r.CreatedAt),
-                r.Status
+                r.Status,
+                r.CreatedAt
             ))
             .ToListAsync();
     }
@@ -144,5 +215,57 @@
             "Returned" => "bg-warning",
             _ => "bg-secondary"
         };
+    }
+
+    // Derived KPI values
+    private int OpenRequestsCount => MockData.Count(r => !string.Equals(r.Status, "Completed", StringComparison.OrdinalIgnoreCase)
+                                                         && !string.Equals(r.Status, "Cancelled", StringComparison.OrdinalIgnoreCase));
+
+    private int CompletedThisWeekCount => MockData.Count(r => r.CreatedAt >= DateTime.UtcNow.AddDays(-7) && string.Equals(r.Status, "Completed", StringComparison.OrdinalIgnoreCase));
+
+    private int PendingVendorActionCount => MockData.Count(r =>
+        r.Status?.Contains("Pending", StringComparison.OrdinalIgnoreCase) == true
+        || r.Status?.Contains("Vendor", StringComparison.OrdinalIgnoreCase) == true
+        || r.Status?.Contains("Returned", StringComparison.OrdinalIgnoreCase) == true);
+
+    private int TasksDueTodayCount => MockData.Count(r => r.StartDate.Date == DateTime.UtcNow.Date);
+
+    // Filtering & paging helpers
+    private IEnumerable<DashboardRow> FilteredRows => MockData
+        .Where(r =>
+            string.IsNullOrWhiteSpace(SearchText)
+                || r.ContractorName.Contains(SearchText, StringComparison.OrdinalIgnoreCase)
+                || r.VendorName.Contains(SearchText, StringComparison.OrdinalIgnoreCase)
+                || r.Facility.Contains(SearchText, StringComparison.OrdinalIgnoreCase)
+                || (r.Status ?? string.Empty).Contains(SearchText, StringComparison.OrdinalIgnoreCase)
+        );
+
+    private int FilteredCount => FilteredRows.Count();
+
+    private int TotalPages => Math.Max(1, (int)Math.Ceiling(FilteredCount / (double)PageSize));
+
+    private IEnumerable<DashboardRow> PagedRows
+    {
+        get
+        {
+            if (CurrentPage > TotalPages) CurrentPage = TotalPages;
+            return FilteredRows.Skip((CurrentPage - 1) * PageSize).Take(PageSize);
+        }
+    }
+
+    private void SetPageSize(int size)
+    {
+        PageSize = size;
+        CurrentPage = 1;
+    }
+
+    private void PrevPage()
+    {
+        if (CurrentPage > 1) CurrentPage--;
+    }
+
+    private void NextPage()
+    {
+        if (CurrentPage < TotalPages) CurrentPage++;
     }
 }
