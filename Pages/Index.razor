@@ -11,15 +11,6 @@
         <h2 class="mb-0">Onboarding Dashboard</h2>
         <p class="text-muted mb-0">High level view of contractor onboarding activity.</p>
     </div>
-
-    <div class="d-flex gap-2 mt-3 mt-md-0 align-items-center">
-        <div class="input-group input-group-sm">
-            <span class="input-group-text">Search</span>
-            <input class="form-control" placeholder="Contractor, vendor, facility or status" @bind="SearchText" @bind:event="oninput" />
-        </div>
-
-        <a class="btn btn-sm btn-primary" href="onboarding/new">New Contractor</a>
-    </div>
 </div>
 
 <div class="row g-3 mb-4">
@@ -62,21 +53,37 @@
 </div>
 
 <div class="card">
-    <div class="card-header d-flex justify-content-between align-items-center">
-        <span>Recent Contractor Requests</span>
+    <!-- Separate title row -->
+    <div class="card-title-row px-3 py-2 border-bottom">
+        <h5 class="mb-0">Recent Contractor Requests</h5>
+    </div>
 
-        <div class="d-flex align-items-center gap-2">
-            <small class="text-muted">Showing @FilteredCount of @MockData.Count</small>
+    <!-- Controls row: page-size on left, search + new button on right -->
+    <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+        <div class="d-flex align-items-center gap-3">
+            <small class="text-muted">Showing @PagedRows.Count() of @FilteredCount</small>
+
             <div class="btn-group btn-group-sm" role="group" aria-label="page size">
                 <button class="btn btn-outline-secondary" @onclick="() => SetPageSize(10)" title="10 rows">10</button>
-                <button class="btn btn-outline-secondary" @onclick="() => SetPageSize(25)" title="25 rows">25</button>
+                <button class="btn btn-outline-secondary" @onclick="() => SetPageSize(20)" title="20 rows">20</button>
+                <button class="btn btn-outline-secondary" @onclick="() => SetPageSize(30)" title="30 rows">30</button>
                 <button class="btn btn-outline-secondary" @onclick="() => SetPageSize(50)" title="50 rows">50</button>
             </div>
+        </div>
+
+        <div class="d-flex gap-2 align-items-center">
+            <div class="input-group input-group-sm">
+                <span class="input-group-text">Search</span>
+                <input class="form-control" placeholder="Contractor, vendor, facility or status" @bind="SearchText" @bind:event="oninput" />
+            </div>
+
+            <a class="btn btn-sm btn-primary btn-new-contractor" href="onboarding/new">New Contractor</a>
         </div>
     </div>
 
     <div class="card-body p-0 card-table-wrapper">
-        <table class="table table-striped mb-0">
+        <!-- added table-hover so Bootstrap applies hover behavior; custom CSS further ensures visibility -->
+        <table class="table table-striped table-hover mb-0">
             <thead class="table-light">
                 <tr>
                     <th>Contractor</th>
@@ -107,14 +114,12 @@
                             <td>@row.StartDate.ToShortDateString()</td>
                             <td><span class="badge @GetStatusBadgeClass(row.Status)">@row.Status</span></td>
                             <td class="text-end">
-                                @* Only show action buttons for non-final statuses *@
                                 @if (!IsFinalStatus(row.Status))
                                 {
                                     <a href="onboarding/request/@row.Id" class="btn btn-sm btn-outline-secondary">View</a>
                                 }
                                 else
                                 {
-                                    @* Optionally show a subtle placeholder to keep layout stable *@
                                     <span class="text-muted small">No actions</span>
                                 }
                             </td>
@@ -169,6 +174,29 @@
     .badge {
         padding: .45rem .6rem;
         font-size: .85rem;
+    }
+
+    /* New Contractor button: slightly wider so text fits on one line */
+    .btn-new-contractor {
+        min-width: 140px;
+        white-space: nowrap;
+    }
+
+    /* ensure a visible hover even when table is striped:
+       apply background to cells (td/th) on row hover so it overrides stripe cells */
+    .table tbody tr {
+        transition: background-color .12s ease;
+    }
+
+    .table.table-hover tbody tr:hover > td,
+    .table.table-hover tbody tr:hover > th {
+        background-color: rgba(13,110,253,0.06);
+    }
+
+    /* Title row styling */
+    .card-title-row h5 {
+        font-size: 1rem;
+        margin: 0;
     }
 </style>
 
