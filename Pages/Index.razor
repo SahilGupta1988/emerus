@@ -116,7 +116,7 @@
                         <td>@row.VendorName</td>
                         <td>@row.Facility</td>
                         <td>@row.StartDate.ToShortDateString()</td>
-                        <td><span class="badge bg-info">@row.Status</span></td>
+                        <td><span class="badge @GetStatusBadgeClass(row.Status)">@row.Status</span></td>
                         <td class="text-end">
                             <a href="onboarding/request/@row.Id" class="btn btn-sm btn-outline-secondary">View</a>
                         </td>
@@ -148,7 +148,7 @@
             .Include(r => r.ContractorPerson)
             .Include(r => r.Partner)
             .OrderByDescending(r => r.CreatedAt)
-            .Take(10)
+            // .Take(10)
             .Select(r => new DashboardRow(
                 r.RequestId,
                 // Contractor name: prefer PreferredFirstName when present, else FirstName; include LastName when available.
@@ -166,5 +166,24 @@
                 r.Status
             ))
             .ToListAsync();
+    }
+
+    private static string GetStatusBadgeClass(string? status)
+    {
+        // normalize for safer comparisons
+        var s = (status ?? string.Empty).Trim();
+
+        return s switch
+        {
+            "Approved" => "bg-success",
+            "Cancelled" => "bg-danger",
+            "Draft" => "bg-secondary",
+            // keep a sensible default for other statuses
+            "Completed" => "bg-primary",
+            "Submitted" => "bg-info",
+            "In Progress" => "bg-info",
+            "Returned" => "bg-warning",
+            _ => "bg-secondary"
+        };
     }
 }

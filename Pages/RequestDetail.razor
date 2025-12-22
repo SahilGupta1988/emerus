@@ -24,7 +24,6 @@ else
     <nav aria-label="breadcrumb" class="mb-3">
         <ol class="breadcrumb">
             <li class="breadcrumb-item"><a href="@Navigation.BaseUri">Home</a></li>
-            @* <li class="breadcrumb-item"><a href="onboarding">Onboarding</a></li> *@
             <li class="breadcrumb-item active" aria-current="page">RequestDetail</li>
         </ol>
     </nav>
@@ -43,6 +42,12 @@ else
             {
                 <div><small class="text-muted">Submitted: @SubmittedAt.Value.ToLocalTime().ToString("g")</small></div>
             }
+
+            <div class="mt-2">
+                <button class="btn btn-success btn-sm me-1" @onclick="ApproveRequest" disabled="@IsLoading">Approve</button>
+                <button class="btn btn-danger btn-sm me-1" @onclick="RejectRequest" disabled="@IsLoading">Reject</button>
+                <button class="btn btn-warning btn-sm" @onclick="ReturnRequest" disabled="@IsLoading">Return</button>
+            </div>
         </div>
     </div>
 
@@ -54,9 +59,6 @@ else
                 </div>
                 <div class="card-body">
                     <dl class="row mb-0">
-                        @* <dt class="col-5 text-muted">Request Id</dt>
-                        <dd class="col-7">@requestId</dd> *@
-
                         <dt class="col-5 text-muted">Facility</dt>
                         <dd class="col-7">@Badge.PrimaryFacility</dd>
 
@@ -73,7 +75,6 @@ else
                 <div class="card-footer d-flex justify-content-between">
                     <div>
                         <button class="btn btn-outline-secondary btn-sm" @onclick="GoBack">Back</button>
-                        @* <button class="btn btn-outline-primary btn-sm ms-2" @onclick="EditRequest">Edit</button> *@
                     </div>
                     <div>
                         <button class="btn btn-light btn-sm" @onclick="Print">Print</button>
@@ -179,6 +180,9 @@ else
 }
 
 @code {
+
+
+
     [Parameter]
     public Guid requestId { get; set; }
 
@@ -299,6 +303,7 @@ else
                 "Draft" => "bg-secondary",
                 "Completed" => "bg-primary",
                 "Cancelled" => "bg-danger",
+                "Returned" => "bg-warning",
                 _ => "bg-secondary"
             };
             CreatedAt = request.CreatedAt;
@@ -337,10 +342,10 @@ else
             }
             catch
             {
-            TargetCatalog = new List<AccessStep.TargetCatalogModel>();
-        }
-        finally
-        {
+                TargetCatalog = new List<AccessStep.TargetCatalogModel>();
+            }
+            finally
+            {
                 if (conn is not null && conn.State == ConnectionState.Open)
                 {
                     await conn.CloseAsync();
@@ -373,6 +378,109 @@ else
         catch
         {
             // ignore
+        }
+    }
+
+    private async Task ApproveRequest()
+    {
+        var confirmed = await JS.InvokeAsync<bool>("confirm", "Approve this request?");
+        if (!confirmed) return;
+
+        IsLoading = true;
+        try
+        {
+            var req = await Db.ContractorRequests.FirstOrDefaultAsync(r => r.RequestId == requestId);
+            if (req is null)
+            {
+                await JS.InvokeVoidAsync("alert", "Request not found.");
+                return;
+            }
+
+            req.Status = "Approved";
+            req.ApprovedAt = DateTime.UtcNow;
+            // optionally set completed/approved metadata here, e.g. CompletedAt
+            await Db.SaveChangesAsync();
+
+            StatusText = req.Status;
+            StatusBadgeClass = "bg-primary";
+
+            // reload display data
+            await OnParametersSetAsync();
+        }
+        catch
+        {
+            await JS.InvokeVoidAsync("alert", "Failed to approve request.");
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    private async Task RejectRequest()
+    {
+        var confirmed = await JS.InvokeAsync<bool>("confirm", "Reject this request? This action cannot be undone.");
+        if (!confirmed) return;
+
+        IsLoading = true;
+        try
+        {
+            var req = await Db.ContractorRequests.FirstOrDefaultAsync(r => r.RequestId == requestId);
+            if (req is null)
+            {
+                await JS.InvokeVoidAsync("alert", "Request not found.");
+                return;
+            }
+
+            req.Status = "Cancelled";
+            req.CancelledAt = DateTime.UtcNow;
+            await Db.SaveChangesAsync();
+
+            StatusText = req.Status;
+            StatusBadgeClass = "bg-danger";
+
+            await OnParametersSetAsync();
+        }
+        catch
+        {
+            await JS.InvokeVoidAsync("alert", "Failed to reject request.");
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    private async Task ReturnRequest()
+    {
+        var confirmed = await JS.InvokeAsync<bool>("confirm", "Return this request for changes?");
+        if (!confirmed) return;
+
+        IsLoading = true;
+        try
+        {
+            var req = await Db.ContractorRequests.FirstOrDefaultAsync(r => r.RequestId == requestId);
+            if (req is null)
+            {
+                await JS.InvokeVoidAsync("alert", "Request not found.");
+                return;
+            }
+
+            req.Status = "Draft";
+            await Db.SaveChangesAsync();
+
+            StatusText = req.Status;
+            StatusBadgeClass = "bg-warning";
+
+            await OnParametersSetAsync();
+        }
+        catch
+        {
+            await JS.InvokeVoidAsync("alert", "Failed to return request.");
+        }
+        finally
+        {
+            IsLoading = false;
         }
     }
 }
