@@ -107,7 +107,16 @@
                             <td>@row.StartDate.ToShortDateString()</td>
                             <td><span class="badge @GetStatusBadgeClass(row.Status)">@row.Status</span></td>
                             <td class="text-end">
-                                <a href="onboarding/request/@row.Id" class="btn btn-sm btn-outline-secondary">View</a>
+                                @* Only show action buttons for non-final statuses *@
+                                @if (!IsFinalStatus(row.Status))
+                                {
+                                    <a href="onboarding/request/@row.Id" class="btn btn-sm btn-outline-secondary">View</a>
+                                }
+                                else
+                                {
+                                    @* Optionally show a subtle placeholder to keep layout stable *@
+                                    <span class="text-muted small">No actions</span>
+                                }
                             </td>
                         </tr>
                     }
@@ -216,6 +225,11 @@
             _ => "bg-secondary"
         };
     }
+
+    // Consider Approved and Cancelled as final statuses with no actions
+    private static bool IsFinalStatus(string? status)
+        => string.Equals(status, "Approved", StringComparison.OrdinalIgnoreCase)
+           || string.Equals(status, "Cancelled", StringComparison.OrdinalIgnoreCase);
 
     // Derived KPI values
     private int OpenRequestsCount => MockData.Count(r => !string.Equals(r.Status, "Completed", StringComparison.OrdinalIgnoreCase)
