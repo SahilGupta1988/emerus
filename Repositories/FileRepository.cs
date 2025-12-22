@@ -1,11 +1,8 @@
-﻿using Azure.Identity;
-using Azure.Security.KeyVault.Secrets;
+﻿using Azure.Security.KeyVault.Secrets;
 using Azure.Storage.Blobs;
 using Emerus.ETM.Admin.Data;
 using Emerus.ETM.Admin.Repositories.Interfaces;
 using Microsoft.EntityFrameworkCore;
-using System.Reflection.Metadata;
-using System.Xml.Linq;
 
 namespace Emerus.ETM.Admin.Repositories
 {
@@ -37,12 +34,12 @@ namespace Emerus.ETM.Admin.Repositories
 
         public async Task<List<ContractorDocument>> GetDocumentsByRequestId(Guid requestId)
         {
-            return await _context.ContractorDocument.Where(x => x.RequestId == requestId && x.Archived != true).AsNoTracking().ToListAsync().ConfigureAwait(false);
+            return await _context.ContractorDocument.Where(x => x.RequestId == requestId && x.Archived != true).ToListAsync().ConfigureAwait(false);
         }
 
         public async Task<ContractorDocument> GetDocumentsByDocumentId(Guid documentId)
         {
-            return await _context.ContractorDocument.Where(x => x.DocumentId == documentId).AsNoTracking().FirstOrDefaultAsync().ConfigureAwait(false);
+            return await _context.ContractorDocument.Where(x => x.DocumentId == documentId).FirstOrDefaultAsync().ConfigureAwait(false);
         }
 
         public async Task<bool> UpdateDocument(ContractorDocument document)

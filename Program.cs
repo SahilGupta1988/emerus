@@ -31,11 +31,18 @@ builder.Services.Configure<OpenIdConnectOptions>(OpenIdConnectDefaults.Authentic
     options.TokenValidationParameters.RoleClaimType = "http://schemas.microsoft.com/ws/2008/06/identity/claims/role";
 });
 
-// Key Vault URL from configuration
-builder.Services.AddSingleton(sp =>
+builder.Services.AddSingleton<SecretClient>(sp =>
 {
-    var kvUrl = builder.Configuration["KeyVault:Url"];
-    return new SecretClient(new Uri(kvUrl), new DefaultAzureCredential());
+    var config = sp.GetRequiredService<IConfiguration>();
+
+    return new SecretClient(
+        new Uri(config["KeyVault:Url"]),
+        new ClientSecretCredential(
+            config["AzureAd:TenantId"],
+            config["AzureAd:ClientId"],
+            config["AzureAd:ClientSecret"]
+        )
+    );
 });
 
 
