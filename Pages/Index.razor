@@ -1,5 +1,9 @@
 @page "/"
 
+@using Emerus.ETM.Admin.Data
+@using Microsoft.EntityFrameworkCore
+@inject AppDbContext DbContext
+
 <PageTitle>Dashboard</PageTitle>
 
 <div class="page-header">
@@ -46,7 +50,7 @@
     </div>
 </div>
 
-<div class="card">
+@* <div class="card">
     <div class="card-header d-flex justify-content-between align-items-center">
         <span>Recent Contractor Requests</span>
         <a class="btn btn-sm btn-primary" href="onboarding/new">New Contractor</a>
@@ -80,15 +84,87 @@
             </tbody>
         </table>
     </div>
+</div> *@
+
+<select id="ddlRole">
+    <option>Requestor</option>
+    <option>Approver</option>
+</select>
+<br />
+<div id="card2" class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span>Recent Contractor Requests</span>
+        <a class="btn btn-sm btn-primary" href="onboarding/new">New Contractor</a>
+    </div>
+    <div class="card-body p-0 card-table-wrapper">
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Contractor</th>
+                    <th>Vendor</th>
+                    <th>Facility</th>
+                    <th>Start Date</th>
+                    <th>Status</th>
+                    <th class="text-end">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var row in MockData2)
+                {
+                    <tr>
+                        <td>@row.ContractorName</td>
+                        <td>@row.VendorName</td>
+                        <td>@row.Facility</td>
+                        <td>@row.StartDate.ToShortDateString()</td>
+                        <td><span class="badge bg-info">@row.Status</span></td>
+                        <td class="text-end">
+                            <a href="onboarding/request/@row.Id" class="btn btn-sm btn-outline-secondary">View</a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
 </div>
 
 @code {
     public record DashboardRow(Guid Id, string ContractorName, string VendorName, string Facility, DateTime StartDate, string Status);
 
-    private List<DashboardRow> MockData = new()
+    // private List<DashboardRow> MockData = new()
+    // {
+    //     new DashboardRow(Guid.NewGuid(), "Jane Doe", "Acme Health Staffing", "Houston Neighborhood", DateTime.Today.AddDays(3), "Submitted"),
+    //     new DashboardRow(Guid.NewGuid(), "John Smith", "MedTech Partners", "Mesa Neighborhood", DateTime.Today.AddDays(5), "In Progress"),
+    //     new DashboardRow(Guid.NewGuid(), "Maria Garcia", "Global Clinical", "Phoenix Neighborhood", DateTime.Today.AddDays(10), "Draft")
+    // };
+
+    // populated from database on initialization
+    private List<DashboardRow> MockData2 { get; set; } = new();
+
+    protected override async Task OnInitializedAsync()
     {
-        new DashboardRow(Guid.NewGuid(), "Jane Doe", "Acme Health Staffing", "Houston Neighborhood", DateTime.Today.AddDays(3), "Submitted"),
-        new DashboardRow(Guid.NewGuid(), "John Smith", "MedTech Partners", "Mesa Neighborhood", DateTime.Today.AddDays(5), "In Progress"),
-        new DashboardRow(Guid.NewGuid(), "Maria Garcia", "Global Clinical", "Phoenix Neighborhood", DateTime.Today.AddDays(10), "Draft")
-    };
+        // Query recent contractor requests, include related person and partner.
+        // Map fields safely with fallbacks so the UI always has values.
+        MockData2 = await DbContext.ContractorRequests
+            .Include(r => r.ContractorPerson)
+            .Include(r => r.Partner)
+            .OrderByDescending(r => r.CreatedAt)
+            .Take(10)
+            .Select(r => new DashboardRow(
+                r.RequestId,
+                // Contractor name: prefer PreferredFirstName when present, else FirstName; include LastName when available.
+                (r.ContractorPerson != null
+                    ? ((string.IsNullOrWhiteSpace(r.ContractorPerson.PreferredFirstName) ? r.ContractorPerson.FirstName : r.ContractorPerson.PreferredFirstName) + " " + r.ContractorPerson.LastName)
+                    : "Unknown"),
+                // Vendor/Partner display name
+                (r.Partner != null ? r.Partner.DisplayName : "Unknown"),
+                // Facility with fallback
+                (r.PrimaryFacility ?? string.Empty),
+                // StartDate: prefer ContractorPerson.StartDate, otherwise fall back to CreatedAt
+                (r.ContractorPerson != null
+                    ? (r.ContractorPerson.StartDate ?? r.CreatedAt)
+                    : r.CreatedAt),
+                r.Status
+            ))
+            .ToListAsync();
+    }
 }

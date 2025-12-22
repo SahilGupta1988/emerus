@@ -1,5 +1,10 @@
+@using Emerus.ETM.Admin.Data
 @using Emerus.ETM.Admin.Pages
 @using System.Linq
+@using System.Data
+@using System.Data.Common
+@using Microsoft.EntityFrameworkCore
+@inject AppDbContext Db
 
 
 <div class="card-section">
@@ -141,4 +146,54 @@
 
     [Parameter]
     public OnboardingNew.BadgeModel Badge { get; set; } = default!;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        // If parent didn't provide a catalog, load from iam.TargetCatalog
+        if (TargetCatalog == null || !TargetCatalog.Any())
+        {
+            var list = new List<AccessStep.TargetCatalogModel>();
+            DbConnection? conn = null;
+            try
+            {
+                conn = Db.Database.GetDbConnection();
+                await conn.OpenAsync();
+
+                using var cmd = conn.CreateCommand();
+                cmd.CommandText = "SELECT TargetId, DisplayName FROM iam.TargetCatalog WHERE IsActive = 1 ORDER BY DisplayName";
+                using var reader = await cmd.ExecuteReaderAsync();
+
+                while (await reader.ReadAsync())
+                {
+                    var item = new AccessStep.TargetCatalogModel();
+
+                    if (!reader.IsDBNull(0))
+                    {
+                        item.TargetId = reader.GetGuid(0);
+                    }
+
+                    if (!reader.IsDBNull(1))
+                    {
+                        item.DisplayName = reader.GetString(1);
+                    }
+
+                    list.Add(item);
+                }
+
+                TargetCatalog = list;
+            }
+            catch
+            {
+                // keep TargetCatalog empty on error to keep UI resilient
+                TargetCatalog = new List<AccessStep.TargetCatalogModel>();
+            }
+            finally
+            {
+                if (conn is not null && conn.State == ConnectionState.Open)
+                {
+                    await conn.CloseAsync();
+                }
+            }
+        }
+    }
 }
