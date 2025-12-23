@@ -2,6 +2,7 @@
 @using Emerus.ETM.Admin.Pages
 @using System.Text.RegularExpressions
 @using Microsoft.AspNetCore.Components.Forms
+@using System.Linq
 
 <style>
     /* make field-level validation messages obvious and consistent */
@@ -29,7 +30,6 @@
 
     <EditForm EditContext="editContext" OnValidSubmit="OnValidSubmit">
         <DataAnnotationsValidator />
-        <ValidationSummary class="alert alert-danger validation-summary" />
 
         <!-- Name group -->
         <div class="row g-3 mt-2">
@@ -155,23 +155,34 @@
     [Parameter]
     public OnboardingNew.DemographicsModel Model { get; set; } = default!;
 
-
     private EditContext? editContext;
     private ValidationMessageStore? messageStore;
+    private EventHandler<FieldChangedEventArgs>? fieldChangedHandler;
 
-    protected override void OnInitialized()
+    protected override void OnParametersSet()
     {
         if (Model is null)
         {
             Model = new OnboardingNew.DemographicsModel();
         }
 
-        editContext = new EditContext(Model);
-        messageStore = new ValidationMessageStore(editContext);
+        // Recreate EditContext and message store when the model instance changes (edit mode / parent provides model later)
+        if (editContext is null || !ReferenceEquals(editContext.Model, Model))
+        {
+            // Unsubscribe previous handler if present
+            if (editContext is not null && fieldChangedHandler is not null)
+            {
+                editContext.OnFieldChanged -= fieldChangedHandler;
+            }
 
-        // Validate on field change so messages appear as user types
-        editContext.OnFieldChanged += (_, __) => ValidateModel();
-        ValidateModel();
+            editContext = new EditContext(Model);
+            messageStore = new ValidationMessageStore(editContext);
+
+            fieldChangedHandler = (_, __) => ValidateModel();
+            editContext.OnFieldChanged += fieldChangedHandler;
+
+            ValidateModel();
+        }
     }
 
     private void OnValidSubmit()
@@ -180,71 +191,105 @@
     }
 
     private void ValidateModel()
-    {
+        {
         if (editContext is null || messageStore is null) return;
 
+        // Clear only messages added via this messageStore
         messageStore.Clear();
 
-        // Required fields
-        if (string.IsNullOrWhiteSpace(Model.FirstName))
+        // Run registered validators (DataAnnotationsValidator) so their messages appear first
+        // This prevents us from adding duplicate messages when attributes like [Required] are present.
+        editContext.Validate();
+
+        bool HasMessages(string fieldName)
         {
-            messageStore.Add(editContext.Field(nameof(Model.FirstName)), "First name is required.");
+            var field = editContext.Field(fieldName);
+            return editContext.GetValidationMessages(field).Any();
         }
 
-        if (string.IsNullOrWhiteSpace(Model.LastName))
+        // Required fields - add custom message only if no existing messages for that field
+        var firstNameField = editContext.Field(nameof(Model.FirstName));
+        if (!HasMessages(nameof(Model.FirstName)) && string.IsNullOrWhiteSpace(Model.FirstName))
         {
-            messageStore.Add(editContext.Field(nameof(Model.LastName)), "Last name is required.");
+            messageStore.Add(firstNameField, "First name is required.");
         }
 
-        if (string.IsNullOrWhiteSpace(Model.PersonalEmail))
+        var lastNameField = editContext.Field(nameof(Model.LastName));
+        if (!HasMessages(nameof(Model.LastName)) && string.IsNullOrWhiteSpace(Model.LastName))
         {
-            messageStore.Add(editContext.Field(nameof(Model.PersonalEmail)), "Personal email is required.");
+            messageStore.Add(lastNameField, "Last name is required.");
         }
-        else
+
+        var emailField = editContext.Field(nameof(Model.PersonalEmail));
+        if (!HasMessages(nameof(Model.PersonalEmail)))
         {
-            try
+            if (string.IsNullOrWhiteSpace(Model.PersonalEmail))
             {
-                var addr = new System.Net.Mail.MailAddress(Model.PersonalEmail);
-                if (addr.Address != Model.PersonalEmail)
+                messageStore.Add(emailField, "Personal email is required.");
+            }
+            else
+            {
+                try
                 {
-                    messageStore.Add(editContext.Field(nameof(Model.PersonalEmail)), "Email address is invalid.");
+                    var addr = new System.Net.Mail.MailAddress(Model.PersonalEmail);
+                    if (addr.Address != Model.PersonalEmail)
+                    {
+                        messageStore.Add(emailField, "Email address is invalid.");
+                    }
+                }
+                catch
+                {
+                    messageStore.Add(emailField, "Email address is invalid.");
                 }
             }
-            catch
+        }
+
+        var dobField = editContext.Field(nameof(Model.DateOfBirth));
+        if (!HasMessages(nameof(Model.DateOfBirth)))
+        {
+            if (Model.DateOfBirth == default)
             {
-                messageStore.Add(editContext.Field(nameof(Model.PersonalEmail)), "Email address is invalid.");
+                messageStore.Add(dobField, "Date of birth is required.");
+            }
+            else if (Model.DateOfBirth > DateTime.Today)
+            {
+                messageStore.Add(dobField, "Date of birth cannot be in the future.");
             }
         }
 
-        if (Model.DateOfBirth == default)
+        var cityField = editContext.Field(nameof(Model.City));
+        if (!HasMessages(nameof(Model.City)) && string.IsNullOrWhiteSpace(Model.City))
         {
-            messageStore.Add(editContext.Field(nameof(Model.DateOfBirth)), "Date of birth is required.");
-        }
-        else if (Model.DateOfBirth > DateTime.Today)
-        {
-            messageStore.Add(editContext.Field(nameof(Model.DateOfBirth)), "Date of birth cannot be in the future.");
+            messageStore.Add(cityField, "City is required.");
         }
 
-        if (string.IsNullOrWhiteSpace(Model.City))
+        var stateField = editContext.Field(nameof(Model.StateProvince));
+        if (!HasMessages(nameof(Model.StateProvince)) && string.IsNullOrWhiteSpace(Model.StateProvince))
         {
-            messageStore.Add(editContext.Field(nameof(Model.City)), "City is required.");
+            messageStore.Add(stateField, "State is required.");
         }
 
-        if (string.IsNullOrWhiteSpace(Model.StateProvince))
+        var countryField = editContext.Field(nameof(Model.CountryCode));
+        if (!HasMessages(nameof(Model.CountryCode)))
         {
-            messageStore.Add(editContext.Field(nameof(Model.StateProvince)), "State is required.");
-        }
-
-        // Country: required + maximum 2 characters
-        if (string.IsNullOrWhiteSpace(Model.CountryCode))
-        {
-            messageStore.Add(editContext.Field(nameof(Model.CountryCode)), "Country is required.");
-        }
-        else if (Model.CountryCode.Length > 2)
-        {
-            messageStore.Add(editContext.Field(nameof(Model.CountryCode)), "Country must be at most 2 characters (ISO code).");
+            if (string.IsNullOrWhiteSpace(Model.CountryCode))
+            {
+                messageStore.Add(countryField, "Country is required.");
+            }
+            else if (Model.CountryCode.Length > 2)
+            {
+                messageStore.Add(countryField, "Country must be at most 2 characters (ISO code).");
+            }
         }
 
         editContext.NotifyValidationStateChanged();
+    }
+
+    public void Dispose()
+    {
+        if (editContext is not null && fieldChangedHandler is not null)
+        {
+            editContext.OnFieldChanged -= fieldChangedHandler;
+        }
     }
 }

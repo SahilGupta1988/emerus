@@ -1,5 +1,6 @@
 @using Emerus.ETM.Admin.Pages
 @using Microsoft.AspNetCore.Components.Forms
+@using System.Linq
 
 <style>
     .required-asterisk {
@@ -20,7 +21,7 @@
 
     <EditForm EditContext="editContext" OnValidSubmit="OnValidSubmit">
         <DataAnnotationsValidator />
-        <ValidationSummary class="alert alert-danger" />
+        @* <ValidationSummary class="alert alert-danger" /> *@
 
         <div class="form-check form-switch mb-2">
             <input class="form-check-input" type="checkbox" id="NeedsBadge" @bind="Model.NeedsBadge" />
@@ -69,6 +70,7 @@
 
     private EditContext? editContext;
     private ValidationMessageStore? messageStore;
+    private EventHandler<FieldChangedEventArgs>? fieldChangedHandler;
 
     protected override void OnInitialized()
     {
@@ -80,8 +82,9 @@
         editContext = new EditContext(Model);
         messageStore = new ValidationMessageStore(editContext);
 
-        // Re-validate whenever any field changes so the message for RequestType appears immediately
-        editContext.OnFieldChanged += (_, __) => ValidateModel();
+        fieldChangedHandler = (_, __) => ValidateModel();
+        editContext.OnFieldChanged += fieldChangedHandler;
+
         ValidateModel();
     }
 
@@ -94,17 +97,46 @@
     {
         if (editContext is null || messageStore is null) return;
 
+        // Clear messages added by this component's store
         messageStore.Clear();
 
-        // If user requests a badge, RequestType must be selected
-        if (Model.NeedsBadge)
+        // Run registered validators (DataAnnotationsValidator) first so their messages appear.
+        // This prevents us adding a duplicate message when the model has attributes like [Required].
+        if (editContext.Validate())
         {
-            if (string.IsNullOrWhiteSpace(Model.RequestType))
-            {
-                messageStore.Add(editContext.Field(nameof(Model.RequestType)), "Access level / request type is required when requesting a badge.");
-            }
+            // validators added messages (if any) — we'll respect those and not add duplicates below
+        }
+
+        var field = editContext.Field(nameof(Model.RequestType));
+
+        // Add our conditional message only when:
+        // - user requests a badge, and
+        // - there are no existing validation messages for the field.
+        if (Model.NeedsBadge && !editContext.GetValidationMessages(field).Any() && string.IsNullOrWhiteSpace(Model.RequestType))
+        {
+            messageStore.Add(field, "Access level / request type is required when requesting a badge.");
+        }
+
+        // If the badge is not requested, ensure we don't show a validation message for RequestType.
+        // Clearing our store above removes our custom messages; if a data-annotation produced a message earlier,
+        // re-run validation with the current state (no validators should add a message because needsBadge=false),
+        // then notify UI. If you still have attribute-based [Required] on the model you want conditional,
+        // consider making that conditional (via IValidatableObject or a custom validator) instead of [Required].
+        if (!Model.NeedsBadge)
+        {
+            // Avoid calling editContext.Validate() here because it may re-add attribute messages.
+            // Clearing our own store and notifying the UI removes custom messages immediately.
+            // For attribute-driven messages you want to suppress when NeedsBadge==false, move that logic into model validation.
         }
 
         editContext.NotifyValidationStateChanged();
+    }
+
+    public void Dispose()
+    {
+        if (editContext is not null && fieldChangedHandler is not null)
+        {
+            editContext.OnFieldChanged -= fieldChangedHandler;
+        }
     }
 }
