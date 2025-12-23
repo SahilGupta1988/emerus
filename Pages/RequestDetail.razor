@@ -21,168 +21,206 @@ else if (IsNotFound)
 }
 else
 {
-    <nav aria-label="breadcrumb" class="mb-3">
-        <ol class="breadcrumb">
-            <li class="breadcrumb-item"><a href="@Navigation.BaseUri">Home</a></li>
-            <li class="breadcrumb-item active" aria-current="page">RequestDetail</li>
-        </ol>
-    </nav>
-
-    <div class="d-flex justify-content-between align-items-start mb-3">
-        <div>
-            <h4 class="mb-0">@DisplayName</h4>
-            <div class="text-muted">@VendorName</div>
-        </div>
-        <div class="text-end">
+    <div class="card-section">
+        <div class="d-flex justify-content-between align-items-start mb-3">
             <div>
-                <span class="badge @StatusBadgeClass">@StatusText</span>
+                <h4 class="mb-0">@DisplayName</h4>
+                <div class="text-muted">@VendorName</div>
+                <div class="text-muted small mt-1">@Demographics.PersonalEmail</div>
             </div>
-            <small class="text-muted">Created: @CreatedAt.ToLocalTime().ToString("g")</small>
-            @if (SubmittedAt is not null)
-            {
-                <div><small class="text-muted">Submitted: @SubmittedAt.Value.ToLocalTime().ToString("g")</small></div>
-            }
 
-            <div class="mt-2">
-                <button class="btn btn-success btn-sm me-1" @onclick="ApproveRequest" disabled="@IsLoading">Approve</button>
-                <button class="btn btn-danger btn-sm me-1" @onclick="RejectRequest" disabled="@IsLoading">Reject</button>
-                <button class="btn btn-warning btn-sm" @onclick="ReturnRequest" disabled="@IsLoading">Return</button>
+            <div class="text-end">
+                <div class="mb-2">
+                    <span class="badge @StatusBadgeClass">@StatusText</span>
+                </div>
+                <div class="text-muted small">Created: @CreatedAt.ToLocalTime().ToString("g")</div>
+                @if (SubmittedAt is not null)
+                {
+                    <div class="text-muted small">Submitted: @SubmittedAt.Value.ToLocalTime().ToString("g")</div>
+                }
+
+                <div class="mt-2 d-flex gap-2 justify-content-end">
+                    <button class="btn btn-outline-secondary btn-sm" @onclick="GoBack">Back</button>
+                    <button class="btn btn-light btn-sm" @onclick="Print">Print</button>
+                    <button class="btn btn-success btn-sm" @onclick="ApproveRequest" disabled="@IsLoading">Approve</button>
+                    <button class="btn btn-danger btn-sm" @onclick="RejectRequest" disabled="@IsLoading">Reject</button>
+                    <button class="btn btn-warning btn-sm" @onclick="ReturnRequest" disabled="@IsLoading">Return</button>
+                </div>
             </div>
         </div>
-    </div>
 
-    <div class="row g-3">
-        <div class="col-md-4">
-            <div class="card mb-3">
-                <div class="card-header">
-                    Summary
-                </div>
-                <div class="card-body">
-                    <dl class="row mb-0">
-                        <dt class="col-5 text-muted">Facility</dt>
-                        <dd class="col-7">@Badge.PrimaryFacility</dd>
-
-                        <dt class="col-5 text-muted">Request Type</dt>
-                        <dd class="col-7">@Badge.RequestType</dd>
-
-                        <dt class="col-5 text-muted">Start Date</dt>
-                        <dd class="col-7">@((JobInfo.StartDate != default) ? JobInfo.StartDate.ToShortDateString() : "-")</dd>
-
-                        <dt class="col-5 text-muted">Contact</dt>
-                        <dd class="col-7">@Demographics.PersonalEmail</dd>
-                    </dl>
-                </div>
-                <div class="card-footer d-flex justify-content-between">
-                    <div>
-                        <button class="btn btn-outline-secondary btn-sm" @onclick="GoBack">Back</button>
+        <div class="row g-3">
+            <!-- Left column: summary + access list -->
+            <div class="col-md-4">
+                <div class="card mb-3">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <strong>Summary</strong>
                     </div>
-                    <div>
-                        <button class="btn btn-light btn-sm" @onclick="Print">Print</button>
+                    <div class="card-body">
+                        <dl class="row mb-0">
+                            <dt class="col-5 text-muted">Facility</dt>
+                            <dd class="col-7">@Badge.PrimaryFacility</dd>
+
+                            <dt class="col-5 text-muted">Request Type</dt>
+                            <dd class="col-7">@Badge.RequestType</dd>
+
+                            <dt class="col-5 text-muted">Start Date</dt>
+                            <dd class="col-7">@((JobInfo.StartDate != default) ? JobInfo.StartDate.ToShortDateString() : "-")</dd>
+
+                            <dt class="col-5 text-muted">Contact</dt>
+                            <dd class="col-7">@Demographics.PersonalEmail</dd>
+                        </dl>
+                    </div>
+                    <div class="card-footer d-flex justify-content-between">
+                        <div>
+                            <small class="text-muted">Request Id</small>
+                            <div class="small text-break">@requestId</div>
+                        </div>
+                        <div>
+                            <small class="text-muted">Status</small>
+                            <div><span class="badge @StatusBadgeClass">@StatusText</span></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <strong>Access Requested</strong>
+                    </div>
+                    <div class="card-body p-0">
+                        @if (AccessInfo.RequestedTargets is null || !AccessInfo.RequestedTargets.Any())
+                        {
+                            <div class="p-3 text-muted">No access requested.</div>
+                        }
+                        else
+                        {
+                            <ul class="list-group list-group-flush">
+                                @foreach (var t in AccessInfo.RequestedTargets)
+                                {
+                                    var display = TargetCatalog?.FirstOrDefault(tc => tc.TargetId == t.TargetId)?.DisplayName ?? t.TargetId.ToString();
+                                    <li class="list-group-item d-flex justify-content-between align-items-start">
+                                        <div>
+                                            <div class="fw-semibold">@display</div>
+                                            <div class="small text-muted">@t.Environment @if(!string.IsNullOrWhiteSpace(t.ChangeType)){ <span> · @t.ChangeType</span> }</div>
+                                        </div>
+                                        <div class="text-end">
+                                            <div><span class="badge bg-secondary">@t.CreatedAt.ToLocalTime().ToString("d")</span></div>
+                                        </div>
+                                    </li>
+                                }
+                            </ul>
+                        }
                     </div>
                 </div>
             </div>
 
-            <div class="card">
-                <div class="card-header">Access Requested</div>
-                <div class="card-body p-0">
-                    @if (AccessInfo.RequestedTargets is null || !AccessInfo.RequestedTargets.Any())
-                    {
-                        <div class="p-3 text-muted">No access requested.</div>
-                    }
-                    else
-                    {
-                        <ul class="list-group list-group-flush">
-                            @foreach (var t in AccessInfo.RequestedTargets)
-                            {
-                                <li class="list-group-item d-flex justify-content-between align-items-center">
-                                    <div>
-                                        <div class="fw-semibold">@(TargetCatalog?.FirstOrDefault(tc => tc.TargetId == t.TargetId)?.DisplayName ?? t.TargetId.ToString())</div>
-                                        <small class="text-muted">@t.Environment @if(!string.IsNullOrWhiteSpace(t.ChangeType)){ <span> · @t.ChangeType</span> }</small>
+            <!-- Right column: detail cards -->
+            <div class="col-md-8">
+                <div class="row g-3">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <strong>Demographics</strong>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <h6 class="mb-1">@Demographics.PreferredFirstName @Demographics.PreferredLastName</h6>
+                                        <div class="text-muted">(@Demographics.FirstName @Demographics.LastName)</div>
+                                        <hr />
+                                        <div><strong>Email</strong>: @Demographics.PersonalEmail</div>
+                                        <div><strong>Phone</strong>: @Demographics.CellPhone</div>
                                     </div>
-                                    <div>
-                                        <span class="badge bg-secondary">@t.CreatedAt.ToLocalTime().ToString("d")</span>
+                                    <div class="col-md-6">
+                                        <div><strong>DOB</strong>: @((Demographics.DateOfBirth != default) ? Demographics.DateOfBirth.ToShortDateString() : "-")</div>
+                                        <div><strong>Gender</strong>: @Demographics.Gender</div>
+                                        <div class="mt-2"><strong>Address</strong>:</div>
+                                        <div class="text-muted">@Demographics.AddressLine1</div>
+                                        @if (!string.IsNullOrWhiteSpace(Demographics.AddressLine2))
+                                        {
+                                            <div class="text-muted">@Demographics.AddressLine2</div>
+                                        }
+                                        <div class="text-muted">@Demographics.City, @Demographics.StateProvince @Demographics.PostalCode</div>
+                                        <div class="text-muted">@Demographics.CountryCode</div>
                                     </div>
-                                </li>
-                            }
-                        </ul>
-                    }
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <strong>Job & Dates</strong>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div><strong>Job title</strong>: @JobInfo.JobTitle</div>
+                                        <div><strong>Department</strong>: @JobInfo.Department</div>
+                                        <div><strong>Agency</strong>: @JobInfo.AgencyName</div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div><strong>External ID</strong>: @JobInfo.ExternalEmployeeId</div>
+                                        <div><strong>Prior Employee</strong>: @((JobInfo.PriorEmployeeFlag) ? "<span class=\"badge bg-success\">Yes</span>" : "<span class=\"badge bg-secondary\">No</span>")</div>
+                                        <div><strong>Start date</strong>: @((JobInfo.StartDate != default) ? JobInfo.StartDate.ToShortDateString() : "-")</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <strong>Hardware</strong>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-4"><strong>Laptop</strong>: @(Hardware.NeedsLaptop ? (MarkupString)"<span class=\"badge bg-success\">Yes</span>" : (MarkupString)"<span class=\"badge bg-secondary\">No</span>")</div>
+                                    <div class="col-md-4"><strong>Dock</strong>: @(Hardware.NeedsDock ? (MarkupString)"<span class=\"badge bg-success\">Yes</span>" : (MarkupString)"<span class=\"badge bg-secondary\">No</span>")</div>
+                                    <div class="col-md-4"><strong>Monitors</strong>: @Hardware.MonitorCount</div>
+                                </div>
+                                <div class="mt-3"><strong>Notes</strong>: @(!string.IsNullOrWhiteSpace(Hardware.Notes) ? Hardware.Notes : "None")</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <strong>Badge</strong>
+                            </div>
+                            <div class="card-body">
+                                <dl class="row mb-0">
+                                    <dt class="col-4 text-muted">Requested</dt>
+                                    <dd class="col-8">
+                                        @if (Badge.NeedsBadge)
+                                        {
+                                            <span class="badge bg-success">Yes</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-secondary">No</span>
+                                        }
+                                    </dd>
+
+                                    <dt class="col-4 text-muted">Facility</dt>
+                                    <dd class="col-8">@Badge.PrimaryFacility</dd>
+
+                                    <dt class="col-4 text-muted">Access level</dt>
+                                    <dd class="col-8">@Badge.RequestType</dd>
+                                </dl>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
-
-        <div class="col-md-8">
-            <div class="card mb-3">
-                <div class="card-header">Demographics</div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <h6 class="mb-1">@Demographics.PreferredFirstName @Demographics.PreferredLastName</h6>
-                            <div class="text-muted">(@Demographics.FirstName @Demographics.LastName)</div>
-                            <hr />
-                            <div><strong>Email</strong>: @Demographics.PersonalEmail</div>
-                            <div><strong>Phone</strong>: @Demographics.CellPhone</div>
-                        </div>
-                        <div class="col-md-6">
-                            <div><strong>DOB</strong>: @((Demographics.DateOfBirth != default) ? Demographics.DateOfBirth.ToShortDateString() : "-")</div>
-                            <div><strong>Gender</strong>: @Demographics.Gender</div>
-                            <div><strong>Address</strong>:</div>
-                            <div class="text-muted">@Demographics.AddressLine1</div>
-                            @if (!string.IsNullOrWhiteSpace(Demographics.AddressLine2))
-                            {
-                                <div class="text-muted">@Demographics.AddressLine2</div>
-                            }
-                            <div class="text-muted">@Demographics.City, @Demographics.StateProvince @Demographics.PostalCode</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="card mb-3">
-                <div class="card-header">Job & Dates</div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div><strong>Job title</strong>: @JobInfo.JobTitle</div>
-                            <div><strong>Department</strong>: @JobInfo.Department</div>
-                            <div><strong>Agency</strong>: @JobInfo.AgencyName</div>
-                        </div>
-                        <div class="col-md-6">
-                            <div><strong>External ID</strong>: @JobInfo.ExternalEmployeeId</div>
-                            <div><strong>Prior Employee</strong>: @((JobInfo.PriorEmployeeFlag) ? "Yes" : "No")</div>
-                            <div><strong>Start date</strong>: @((JobInfo.StartDate != default) ? JobInfo.StartDate.ToShortDateString() : "-")</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="card mb-3">
-                <div class="card-header">Hardware</div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-4"><strong>Laptop</strong>: @((Hardware.NeedsLaptop) ? "Yes" : "No")</div>
-                        <div class="col-md-4"><strong>Dock</strong>: @((Hardware.NeedsDock) ? "Yes" : "No")</div>
-                        <div class="col-md-4"><strong>Monitors</strong>: @Hardware.MonitorCount</div>
-                    </div>
-                    <div class="mt-3"><strong>Notes</strong>: @(!string.IsNullOrWhiteSpace(Hardware.Notes) ? Hardware.Notes : "None")</div>
-                </div>
-            </div>
-
-            <div class="card">
-                <div class="card-header">Badge</div>
-                <div class="card-body">
-                    <div><strong>Requested</strong>: @((Badge.NeedsBadge) ? "Yes" : "No")</div>
-                    <div><strong>Facility</strong>: @Badge.PrimaryFacility</div>
-                    <div><strong>Access level</strong>: @Badge.RequestType</div>
-                </div>
-            </div>
-        </div>
-    </div>
+    </div> <!-- card-section -->
 }
 
 @code {
-
-
-
     [Parameter]
     public Guid requestId { get; set; }
 
@@ -363,12 +401,7 @@ else
         Navigation.NavigateTo("/");
     }
 
-    void EditRequest()
-    {
-        // navigate to the onboarding new page that can edit based on id (adjust route if you implemented edit route)
-        Navigation.NavigateTo($"/onboarding/new?editId={requestId}");
-    }
-
+    
     async Task Print()
     {
         try

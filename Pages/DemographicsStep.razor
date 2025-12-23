@@ -106,15 +106,12 @@
 
         <!-- Address block -->
         <div class="row g-3 mt-3">
-            <div class="col-12">
+            <div class="col-6">
                 <label class="form-label">Address Line 1</label>
                 <InputText class="form-control" @bind-Value="Model.AddressLine1" />
                 <ValidationMessage For="@(() => Model.AddressLine1)" class="field-validation" />
             </div>
-        </div>
-
-        <div class="row g-3 mt-2">
-            <div class="col-12">
+            <div class="col-6">
                 <label class="form-label">Address Line 2</label>
                 <InputText class="form-control" @bind-Value="Model.AddressLine2" />
                 <ValidationMessage For="@(() => Model.AddressLine2)" class="field-validation" />
