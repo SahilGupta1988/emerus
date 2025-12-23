@@ -3,6 +3,8 @@
 @using Microsoft.EntityFrameworkCore
 @using System.ComponentModel.DataAnnotations
 @using System.Collections.Generic
+@using Microsoft.AspNetCore.Components
+@using System.Linq
 @inject AppDbContext Db
 @inject NavigationManager Navigation
 @inject IJSRuntime JS
@@ -116,11 +118,114 @@
     private HardwareModel Hardware { get; set; } = new();
     private BadgeModel Badge { get; set; } = new();
 
+    // support opening the page in edit mode via query string: /onboarding/new?editId={guid}
+    [Parameter]
+    [SupplyParameterFromQuery(Name = "editId")]
+    public Guid? EditId { get; set; }
+
     // New: store the GUID generated when creating/saving a request (draft or final)
     private Guid SavedRequestId { get; set; }
 
     // State to show loader / prevent double-click while performing Next operation
     private bool IsProcessingNext { get; set; }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        // If an editId is provided, load that request and populate the form models for editing.
+        if (EditId is not null && EditId != Guid.Empty)
+        {
+            var id = EditId.Value;
+
+            var request = await Db.ContractorRequests
+                .Include(r => r.ContractorPerson)
+                .Include(r => r.ContractorHardwareRequest)
+                .FirstOrDefaultAsync(r => r.RequestId == id);
+
+            if (request is not null)
+            {
+                SavedRequestId = request.RequestId;
+
+                var person = request.ContractorPerson;
+                var hardware = request.ContractorHardwareRequest;
+
+                Demographics = new DemographicsModel
+                {
+                    FirstName = person?.FirstName ?? string.Empty,
+                    PreferredFirstName = person?.PreferredFirstName ?? string.Empty,
+                    LastName = person?.LastName ?? string.Empty,
+                    PreferredLastName = person?.PreferredLastName ?? string.Empty,
+                    PersonalEmail = person?.PersonalEmail ?? string.Empty,
+                    CellPhone = person?.CellPhone ?? string.Empty,
+                    DateOfBirth = person?.DateOfBirth ?? DateTime.Today,
+                    Gender = person?.Gender ?? string.Empty,
+                    AddressLine1 = person?.AddressLine1 ?? string.Empty,
+                    AddressLine2 = person?.AddressLine2 ?? string.Empty,
+                    City = person?.City ?? string.Empty,
+                    StateProvince = person?.StateProvince ?? string.Empty,
+                    PostalCode = person?.PostalCode ?? string.Empty,
+                    CountryCode = person?.CountryCode ?? string.Empty,
+                    Identity = string.Empty
+                };
+
+                JobInfo = new JobModel
+                {
+                    AgencyName = person?.AgencyName ?? string.Empty,
+                    JobTitle = person?.JobTitle ?? string.Empty,
+                    JobCode = person?.JobCode ?? string.Empty,
+                    Department = person?.Department ?? string.Empty,
+                    ExternalEmployeeId = person?.ExternalEmployeeId ?? string.Empty,
+                    PriorEmployeeFlag = person?.PriorEmployeeFlag ?? false,
+                    StartDate = person?.StartDate ?? DateTime.Today
+                };
+
+                AccessInfo = new AccessModel
+                {
+                    RequestedTargets = await Db.ContractorAccessRequest
+                        .Where(a => a.RequestId == SavedRequestId)
+                        .Select(a => new RequestTargetModel
+                        {
+                            AccessRequestId = a.AccessRequestId,
+                            RequestId = a.RequestId,
+                            TargetId = a.TargetId,
+                            Environment = a.Environment,
+                            ChangeType = a.ChangeType,
+                            MirrorUserUpn = a.MirrorUserUpn,
+                            DetailJson = a.DetailJson,
+                            CreatedAt = a.CreatedAt,
+                            CreatedByUpn = a.CreatedByUpn
+                        }).ToListAsync()
+                };
+
+                Hardware = new HardwareModel
+                {
+                    NeedsLaptop = hardware?.NeedsLaptop ?? true,
+                    NeedsDock = hardware?.NeedsDock ?? true,
+                    MonitorCount = hardware?.MonitorCount ?? 2,
+                    NeedsHeadset = hardware?.NeedsHeadset ?? true,
+                    NeedsHotspot = hardware?.NeedsHotspot ?? true,
+                    Notes = hardware?.Notes ?? string.Empty
+                };
+
+                Badge = new BadgeModel
+                {
+                    NeedsBadge = !string.IsNullOrWhiteSpace(request.RequestType),
+                    PrimaryFacility = request.PrimaryFacility ?? string.Empty,
+                    RequestType = request.RequestType ?? string.Empty
+                };
+
+                // Allow the user to navigate all steps while editing existing draft
+                MaxStepIndex = Steps.Count - 1;
+                CurrentStepIndex = 0;
+
+                StateHasChanged();
+            }
+            else
+            {
+                // If not found, navigate back to dashboard to avoid editing empty id
+                Navigation.NavigateTo("/");
+            }
+        }
+    }
 
     void GoToStep(int i)
     {
@@ -316,44 +421,80 @@
 
         try
         {
-            var request = new ContractorRequest
+            // If we already have a SavedRequestId, update the existing request/person; otherwise create new
+            if (SavedRequestId == Guid.Empty)
             {
-                RequestId = Guid.NewGuid(),
-                RequestedByUpn = $"{Demographics.FirstName} {Demographics.LastName}",
-                PartnerCode = "AGENCY1",
-                RequestType = "Requestor",
-                CreatedAt = DateTime.UtcNow,
-                Status = "Draft",
-                UserId = Guid.Parse("6116088C-850F-4C38-A342-22CCE2071DC3")
-            };
+                var request = new ContractorRequest
+                {
+                    RequestId = Guid.NewGuid(),
+                    RequestedByUpn = $"{Demographics.FirstName} {Demographics.LastName}",
+                    PartnerCode = "AGENCY1",
+                    RequestType = "Requestor",
+                    CreatedAt = DateTime.UtcNow,
+                    Status = "Draft",
+                    UserId = Guid.Parse("6116088C-850F-4C38-A342-22CCE2071DC3")
+                };
 
-            var person = new ContractorPerson
+                var person = new ContractorPerson
+                {
+                    RequestId = request.RequestId,
+                    FirstName = Demographics.FirstName,
+                    PreferredFirstName = Demographics.PreferredFirstName,
+                    LastName = Demographics.LastName,
+                    PreferredLastName = Demographics.PreferredLastName,
+                    PersonalEmail = Demographics.PersonalEmail,
+                    CellPhone = Demographics.CellPhone,
+                    DateOfBirth = Demographics.DateOfBirth,
+                    Gender = Demographics.Gender,
+                    AddressLine1 = Demographics.AddressLine1,
+                    AddressLine2 = Demographics.AddressLine2,
+                    City = Demographics.City,
+                    StateProvince = Demographics.StateProvince,
+                    PostalCode = Demographics.PostalCode,
+                    CountryCode = Demographics.CountryCode,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                };
+
+                Db.ContractorRequests.Add(request);
+                Db.ContractorPeople.Add(person);
+                await Db.SaveChangesAsync();
+
+                // Store the generated GUID for later reference (draft id)
+                SavedRequestId = request.RequestId;
+            }
+            else
             {
-                RequestId = request.RequestId,
-                FirstName = Demographics.FirstName,
-                PreferredFirstName = Demographics.PreferredFirstName,
-                LastName = Demographics.LastName,
-                PreferredLastName = Demographics.PreferredLastName,
-                PersonalEmail = Demographics.PersonalEmail,
-                CellPhone = Demographics.CellPhone,
-                DateOfBirth = Demographics.DateOfBirth,
-                Gender = Demographics.Gender,
-                AddressLine1 = Demographics.AddressLine1,
-                AddressLine2 = Demographics.AddressLine2,
-                City = Demographics.City,
-                StateProvince = Demographics.StateProvince,
-                PostalCode = Demographics.PostalCode,
-                CountryCode = Demographics.CountryCode,
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow
-            };
+                var existingRequest = await Db.ContractorRequests.FirstOrDefaultAsync(r => r.RequestId == SavedRequestId);
+                var existingPerson = await Db.ContractorPeople.FirstOrDefaultAsync(p => p.RequestId == SavedRequestId);
 
-            Db.ContractorRequests.Add(request);
-            Db.ContractorPeople.Add(person);
-            await Db.SaveChangesAsync();
+                if (existingPerson is not null)
+                {
+                    existingPerson.FirstName = Demographics.FirstName;
+                    existingPerson.PreferredFirstName = Demographics.PreferredFirstName;
+                    existingPerson.LastName = Demographics.LastName;
+                    existingPerson.PreferredLastName = Demographics.PreferredLastName;
+                    existingPerson.PersonalEmail = Demographics.PersonalEmail;
+                    existingPerson.CellPhone = Demographics.CellPhone;
+                    existingPerson.DateOfBirth = Demographics.DateOfBirth;
+                    existingPerson.Gender = Demographics.Gender;
+                    existingPerson.AddressLine1 = Demographics.AddressLine1;
+                    existingPerson.AddressLine2 = Demographics.AddressLine2;
+                    existingPerson.City = Demographics.City;
+                    existingPerson.StateProvince = Demographics.StateProvince;
+                    existingPerson.PostalCode = Demographics.PostalCode;
+                    existingPerson.CountryCode = Demographics.CountryCode;
+                    existingPerson.UpdatedAt = DateTime.UtcNow;
+                }
 
-            // Store the generated GUID for later reference (draft id)
-            SavedRequestId = request.RequestId;
+                if (existingRequest is not null)
+                {
+                    // existingRequest.UpdatedAt = DateTime.UtcNow;
+                }
+
+                await Db.SaveChangesAsync();
+            }
+
             return true;
         }
         catch (Exception ex)

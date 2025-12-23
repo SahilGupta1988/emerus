@@ -2,7 +2,9 @@
 
 @using Emerus.ETM.Admin.Data
 @using Microsoft.EntityFrameworkCore
+@using System
 @inject AppDbContext DbContext
+@inject NavigationManager Navigation
 
 <PageTitle>Dashboard</PageTitle>
 
@@ -116,7 +118,15 @@
                             <td class="text-end">
                                 @if (!IsFinalStatus(row.Status))
                                 {
-                                    <a href="onboarding/request/@row.Id" class="btn btn-sm btn-outline-secondary">View</a>
+                                    @* If status is Draft navigate to onboarding/new in edit mode, otherwise go to request detail *@
+                                    @if (string.Equals(row.Status, "Draft", StringComparison.OrdinalIgnoreCase))
+                                    {
+                                        <button class="btn btn-sm btn-outline-primary" @onclick="() => EditDraft(row.Id)">Edit</button>
+                                    }
+                                    else
+                                    {
+                                        <a href="onboarding/request/@row.Id" class="btn btn-sm btn-outline-secondary">View</a>
+                                    }
                                 }
                                 else
                                 {
@@ -309,5 +319,11 @@
     private void NextPage()
     {
         if (CurrentPage < TotalPages) CurrentPage++;
+    }
+
+    private void EditDraft(Guid id)
+    {
+        // navigate to onboarding/new in edit mode using query parameter the page already supports
+        Navigation.NavigateTo($"/onboarding/new?editId={id}");
     }
 }

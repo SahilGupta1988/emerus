@@ -4,127 +4,257 @@
 @using System.Data
 @using System.Data.Common
 @using Microsoft.EntityFrameworkCore
+@using Microsoft.AspNetCore.Components
 @inject AppDbContext Db
 
-
 <div class="card-section">
-    <h5>Review</h5>
-    <p class="text-muted">Confirm that the information below is correct before submitting.</p>
+    <div class="d-flex justify-content-between align-items-start mb-2">
+        <div>
+            <h5 class="mb-0">Review</h5>
+            <p class="text-muted mb-0">Confirm that the information below is correct before submitting.</p>
+        </div>
+        @if (OnEditStep.HasDelegate)
+        {
+            <div>
+                <small class="text-muted">Need changes? <button class="btn btn-link btn-sm p-0" @onclick="(() => OnEditStep.InvokeAsync(0))">Jump to step</button></small>
+            </div>
+        }
+    </div>
 
-    <!-- Demographics -->
-    <h6 class="mt-3">Demographics</h6>
-    <dl class="row">
-        <dt class="col-md-3">Full name</dt>
-        <dd class="col-md-9">@Demographics.PreferredFirstName @Demographics.PreferredLastName
-            <small class="text-muted">(@Demographics.FirstName @Demographics.LastName)</small>
-        </dd>
-
-        <dt class="col-md-3">Contact</dt>
-        <dd class="col-md-9">
-            <div>@Demographics.PersonalEmail</div>
-            <div>@Demographics.CellPhone</div>
-        </dd>
-
-        <dt class="col-md-3">Date of birth</dt>
-        <dd class="col-md-9">@((Demographics.DateOfBirth is DateTime dt) ? dt.ToShortDateString() : "-")</dd>
-
-        <dt class="col-md-3">Gender / Identity</dt>
-        <dd class="col-md-9">@Demographics.Gender @if(!string.IsNullOrWhiteSpace(Demographics.Identity)){ <span class="text-muted"> - @Demographics.Identity</span> }</dd>
-
-        <dt class="col-md-3">Address</dt>
-        <dd class="col-md-9">
-            <div>@Demographics.AddressLine1</div>
-            @if (!string.IsNullOrWhiteSpace(Demographics.AddressLine2))
-            {
-                <div class="text-muted">@Demographics.AddressLine2</div>
-            }
-            <div>@Demographics.City, @Demographics.StateProvince @Demographics.PostalCode</div>
-            <div>@Demographics.CountryCode</div>
-        </dd>
-    </dl>
-
-    <!-- Job -->
-    <h6 class="mt-4">Job & Dates</h6>
-    <dl class="row">
-        <dt class="col-md-3">Job title</dt>
-        <dd class="col-md-9">@JobInfo.JobTitle</dd>
-
-        <dt class="col-md-3">Department</dt>
-        <dd class="col-md-9">@JobInfo.Department</dd>
-
-        <dt class="col-md-3">Agency / Job code</dt>
-        <dd class="col-md-9">@JobInfo.AgencyName @if(!string.IsNullOrWhiteSpace(JobInfo.JobCode)){ <span class="text-muted"> - @JobInfo.JobCode</span> }</dd>
-
-        <dt class="col-md-3">External ID</dt>
-        <dd class="col-md-9">@JobInfo.ExternalEmployeeId</dd>
-
-        <dt class="col-md-3">Prior employee</dt>
-        <dd class="col-md-9">@((JobInfo.PriorEmployeeFlag) ? "Yes" : "No")</dd>
-
-        <dt class="col-md-3">Start date</dt>
-        <dd class="col-md-9">@((JobInfo.StartDate is DateTime sd) ? sd.ToShortDateString() : "-")</dd>
-    </dl>
-
-    <!-- Access -->
-    <h6 class="mt-4">Access Requests</h6>
-    @if (AccessInfo.RequestedTargets is null || !AccessInfo.RequestedTargets.Any())
-    {
-        <p class="text-muted">No access requested.</p>
-    }
-    else
-    {
-        <ul class="list-group">
-            @foreach (var rt in AccessInfo.RequestedTargets)
-            {
-                <li class="list-group-item">
-                    @* Render a sensible summary for the requested target. Show TargetId if no display name is available. *@
-                    @if (rt is not null)
+    <div class="row g-3">
+        <!-- Demographics -->
+        <div class="col-12 col-md-6">
+            <div class="card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <strong>Demographics</strong>
+                    @if (OnEditStep.HasDelegate)
                     {
-                        var displayname = TargetCatalog?.FirstOrDefault(t => t.TargetId == rt.TargetId)?.DisplayName;
-                        <div class="d-flex justify-content-between">
-                            <div>Target: @(displayname ?? rt.TargetId.ToString())</div>
-                            @* <small class="text-muted">RequestId: @rt.RequestId</small> *@
+                        <button class="btn btn-sm btn-outline-primary" @onclick="(() => OnEditStep.InvokeAsync(0))" aria-label="Edit demographics">Edit</button>
+                    }
+                </div>
+                <div class="card-body">
+                    <h6 class="mb-1">@Demographics.PreferredFirstName @Demographics.PreferredLastName</h6>
+                    <div class="text-muted mb-2">(@Demographics.FirstName @Demographics.LastName)</div>
+
+                    <dl class="row mb-0">
+                        <dt class="col-4 text-muted">Email</dt>
+                        <dd class="col-8">@Demographics.PersonalEmail</dd>
+
+                        <dt class="col-4 text-muted">Phone</dt>
+                        <dd class="col-8">@Demographics.CellPhone</dd>
+
+                        <dt class="col-4 text-muted">DOB</dt>
+                        <dd class="col-8">@((Demographics.DateOfBirth is DateTime dt) ? dt.ToShortDateString() : "-")</dd>
+
+                        <dt class="col-4 text-muted">Gender</dt>
+                        <dd class="col-8">@Demographics.Gender @if(!string.IsNullOrWhiteSpace(Demographics.Identity)){ <span class="text-muted"> - @Demographics.Identity</span> }</dd>
+
+                        <dt class="col-4 text-muted">Address</dt>
+                        <dd class="col-8">
+                            <div>@Demographics.AddressLine1</div>
+                            @if (!string.IsNullOrWhiteSpace(Demographics.AddressLine2))
+                            {
+                                <div class="text-muted">@Demographics.AddressLine2</div>
+                            }
+                            <div class="text-muted">@Demographics.City, @Demographics.StateProvince @Demographics.PostalCode</div>
+                            <div class="text-muted">@Demographics.CountryCode</div>
+                        </dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+
+        <!-- Job & Dates -->
+        <div class="col-12 col-md-6">
+            <div class="card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <strong>Job & Dates</strong>
+                    @if (OnEditStep.HasDelegate)
+                    {
+                        <button class="btn btn-sm btn-outline-primary" @onclick="(() => OnEditStep.InvokeAsync(1))" aria-label="Edit job">Edit</button>
+                    }
+                </div>
+                <div class="card-body">
+                    <dl class="row mb-0">
+                        <dt class="col-4 text-muted">Job title</dt>
+                        <dd class="col-8">@JobInfo.JobTitle</dd>
+
+                        <dt class="col-4 text-muted">Department</dt>
+                        <dd class="col-8">@JobInfo.Department</dd>
+
+                        <dt class="col-4 text-muted">Agency / Job code</dt>
+                        <dd class="col-8">@JobInfo.AgencyName @if(!string.IsNullOrWhiteSpace(JobInfo.JobCode)){ <span class="text-muted"> - @JobInfo.JobCode</span> }</dd>
+
+                        <dt class="col-4 text-muted">External ID</dt>
+                        <dd class="col-8">@JobInfo.ExternalEmployeeId</dd>
+
+                        <dt class="col-4 text-muted">Prior employee</dt>
+                        <dd class="col-8">
+                            @if (JobInfo.PriorEmployeeFlag)
+                            {
+                                <span class="badge bg-success">Yes</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-secondary">No</span>
+                            }
+                        </dd>
+
+                        <dt class="col-4 text-muted">Start date</dt>
+                        <dd class="col-8">@((JobInfo.StartDate is DateTime sd) ? sd.ToShortDateString() : "-")</dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+
+        <!-- Access Requests -->
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <strong>Access Requests</strong>
+                    @if (OnEditStep.HasDelegate)
+                    {
+                        <button class="btn btn-sm btn-outline-primary" @onclick="(() => OnEditStep.InvokeAsync(2))" aria-label="Edit access">Edit</button>
+                    }
+                </div>
+                <div class="card-body">
+                    @if (AccessInfo?.RequestedTargets is null || !AccessInfo.RequestedTargets.Any())
+                    {
+                        <p class="text-muted mb-0">No access requested.</p>
+                    }
+                    else
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-sm mb-0 align-middle">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Target</th>
+                                        <th>Environment</th>
+                                        <th class="text-end">Requested</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var rt in AccessInfo.RequestedTargets)
+                                    {
+                                        var displayname = TargetCatalog?.FirstOrDefault(t => t.TargetId == rt.TargetId)?.DisplayName;
+                                        <tr>
+                                            <td>@(displayname ?? rt.TargetId.ToString())</td>
+                                            <td>@(string.IsNullOrWhiteSpace(rt.Environment) ? "-" : rt.Environment)</td>
+                                            <td class="text-end"><small class="text-muted">@rt.CreatedAt.ToLocalTime().ToString("g")</small></td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
                         </div>
                     }
-                </li>
-            }
-        </ul>
-    }
+                </div>
+            </div>
+        </div>
 
-    <!-- Hardware -->
-    <h6 class="mt-4">Hardware</h6>
-    <dl class="row">
-        <dt class="col-md-3">Laptop</dt>
-        <dd class="col-md-9">@((Hardware.NeedsLaptop) ? "Yes" : "No")</dd>
+        <!-- Hardware -->
+        <div class="col-12 col-md-6">
+            <div class="card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <strong>Hardware</strong>
+                    @if (OnEditStep.HasDelegate)
+                    {
+                        <button class="btn btn-sm btn-outline-primary" @onclick="(() => OnEditStep.InvokeAsync(3))" aria-label="Edit hardware">Edit</button>
+                    }
+                </div>
+                <div class="card-body">
+                    <dl class="row mb-0">
+                        <dt class="col-4 text-muted">Laptop</dt>
+                        <dd class="col-8">
+                            @if (Hardware.NeedsLaptop)
+                            {
+                                <span class="badge bg-success">Yes</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-secondary">No</span>
+                            }
+                        </dd>
 
-        <dt class="col-md-3">Dock</dt>
-        <dd class="col-md-9">@((Hardware.NeedsDock) ? "Yes" : "No")</dd>
+                        <dt class="col-4 text-muted">Dock</dt>
+                        <dd class="col-8">
+                            @if (Hardware.NeedsDock)
+                            {
+                                <span class="badge bg-success">Yes</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-secondary">No</span>
+                            }
+                        </dd>
 
-        <dt class="col-md-3">Monitors</dt>
-        <dd class="col-md-9">@Hardware.MonitorCount</dd>
+                        <dt class="col-4 text-muted">Monitors</dt>
+                        <dd class="col-8">@Hardware.MonitorCount</dd>
 
-        <dt class="col-md-3">Headset</dt>
-        <dd class="col-md-9">@((Hardware.NeedsHeadset) ? "Yes" : "No")</dd>
+                        <dt class="col-4 text-muted">Headset</dt>
+                        <dd class="col-8">
+                            @if (Hardware.NeedsHeadset)
+                            {
+                                <span class="badge bg-success">Yes</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-secondary">No</span>
+                            }
+                        </dd>
 
-        <dt class="col-md-3">Hotspot</dt>
-        <dd class="col-md-9">@((Hardware.NeedsHotspot) ? "Yes" : "No")</dd>
+                        <dt class="col-4 text-muted">Hotspot</dt>
+                        <dd class="col-8">
+                            @if (Hardware.NeedsHotspot)
+                            {
+                                <span class="badge bg-success">Yes</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-secondary">No</span>
+                            }
+                        </dd>
 
-        <dt class="col-md-3">Notes</dt>
-        <dd class="col-md-9">@(!string.IsNullOrWhiteSpace(Hardware.Notes) ? Hardware.Notes : "None")</dd>
-    </dl>
+                        <dt class="col-4 text-muted">Notes</dt>
+                        <dd class="col-8">@(!string.IsNullOrWhiteSpace(Hardware.Notes) ? Hardware.Notes : "None")</dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
 
-    <!-- Badge -->
-    <h6 class="mt-4">Badge</h6>
-    <dl class="row mb-0">
-        <dt class="col-md-3">Requested</dt>
-        <dd class="col-md-9">@((Badge.NeedsBadge) ? "Yes" : "No")</dd>
+        <!-- Badge -->
+        <div class="col-12 col-md-6">
+            <div class="card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <strong>Badge</strong>
+                    @if (OnEditStep.HasDelegate)
+                    {
+                        <button class="btn btn-sm btn-outline-primary" @onclick="(() => OnEditStep.InvokeAsync(4))" aria-label="Edit badge">Edit</button>
+                    }
+                </div>
+                <div class="card-body">
+                    <dl class="row mb-0">
+                        <dt class="col-4 text-muted">Requested</dt>
+                        <dd class="col-8">
+                            @if (Badge.NeedsBadge)
+                            {
+                                <span class="badge bg-success">Yes</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-secondary">No</span>
+                            }
+                        </dd>
 
-        <dt class="col-md-3">Facility</dt>
-        <dd class="col-md-9">@Badge.PrimaryFacility</dd>
+                        <dt class="col-4 text-muted">Facility</dt>
+                        <dd class="col-8">@Badge.PrimaryFacility</dd>
 
-        <dt class="col-md-3">Access level</dt>
-        <dd class="col-md-9">@Badge.RequestType</dd>
-    </dl>
+                        <dt class="col-4 text-muted">Access level</dt>
+                        <dd class="col-8">@Badge.RequestType</dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
 @code {
@@ -146,6 +276,10 @@
 
     [Parameter]
     public OnboardingNew.BadgeModel Badge { get; set; } = default!;
+
+    // Optional callback so parent page (OnboardingNew) can jump to a step when user clicks Edit
+    [Parameter]
+    public EventCallback<int> OnEditStep { get; set; }
 
     protected override async Task OnParametersSetAsync()
     {
