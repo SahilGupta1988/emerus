@@ -31,17 +31,13 @@ builder.Services.Configure<OpenIdConnectOptions>(OpenIdConnectDefaults.Authentic
     options.TokenValidationParameters.RoleClaimType = "http://schemas.microsoft.com/ws/2008/06/identity/claims/role";
 });
 
-builder.Services.AddSingleton<SecretClient>(sp =>
+builder.Services.AddSingleton(sp =>
 {
     var config = sp.GetRequiredService<IConfiguration>();
 
     return new SecretClient(
         new Uri(config["KeyVault:Url"]),
-        new ClientSecretCredential(
-            config["AzureAd:TenantId"],
-            config["AzureAd:ClientId"],
-            config["AzureAd:ClientSecret"]
-        )
+        new DefaultAzureCredential()
     );
 });
 
