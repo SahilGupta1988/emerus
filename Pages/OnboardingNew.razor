@@ -524,7 +524,9 @@
 
             if (existing != null)
             {
+                existing.AgencyName = JobInfo.AgencyName;
                 existing.JobTitle = JobInfo.JobTitle;
+                existing.JobCode = JobInfo.JobCode;
                 existing.Department = JobInfo.Department;
                 existing.StartDate = JobInfo.StartDate;
                 existing.PriorEmployeeFlag = JobInfo.PriorEmployeeFlag;
@@ -538,7 +540,9 @@
                 var person = new ContractorPerson
                 {
                     RequestId = SavedRequestId,
+                    AgencyName = JobInfo.AgencyName,
                     JobTitle = JobInfo.JobTitle,
+                    JobCode = JobInfo.JobCode,
                     Department = JobInfo.Department,
                     StartDate = JobInfo.StartDate,
                     PriorEmployeeFlag = JobInfo.PriorEmployeeFlag,

@@ -41,6 +41,10 @@ namespace Emerus.ETM.Admin.Data
                 entity.HasKey(e => e.RequestId);
                 entity.Property(e => e.PartnerCode).HasMaxLength(32).HasColumnName("PartnerCode");
 
+                entity.Property(e => e.Comments)
+                      .HasColumnType("nvarchar(max)")
+                      .HasColumnName("Comments");
+
                 entity.HasOne(r => r.ContractorPerson)
                       .WithOne(p => p.ContractorRequest)
                       .HasForeignKey<ContractorPerson>(p => p.RequestId)

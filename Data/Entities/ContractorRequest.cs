@@ -1,4 +1,3 @@
-
 using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -36,6 +35,10 @@ namespace Emerus.ETM.Admin.Data
         public DateTime? ApprovedAt { get; set; }
         public DateTime? CompletedAt { get; set; }
         public DateTime? CancelledAt { get; set; }
+
+        // Comments (nullable, nvarchar(max))
+        [Column(TypeName = "nvarchar(max)")]
+        public string? Comments { get; set; }
 
         // ===========================
         // Navigation Properties

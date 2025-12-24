@@ -49,11 +49,11 @@ else
                     }
                     @if (ShowRejectButton)
                     {
-                        <button class="btn btn-danger btn-sm" @onclick="RejectRequest" disabled="@IsLoading">Reject</button>
+                        <button class="btn btn-danger btn-sm" @onclick="PromptReject" disabled="@IsLoading">Reject</button>
                     }
                     @if (ShowReturnButton)
                     {
-                        <button class="btn btn-warning btn-sm" @onclick="ReturnRequest" disabled="@IsLoading">Return</button>
+                        <button class="btn btn-warning btn-sm" @onclick="PromptReturn" disabled="@IsLoading">Return</button>
                     }
                 </div>
             </div>
@@ -227,6 +227,32 @@ else
     </div> <!-- card-section -->
 }
 
+@if (ShowCommentModal)
+{
+    <div class="modal d-block" tabindex="-1" style="background: rgba(0,0,0,0.5);">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">@ModalTitle</h5>
+                    <button type="button" class="btn-close" aria-label="Close" @onclick="CancelComment"></button>
+                </div>
+                <div class="modal-body">
+                    <label class="form-label">Comments</label>
+                    <textarea class="form-control" @bind="CommentText" rows="4" placeholder="Add comments (required)"></textarea>
+                    @if (!string.IsNullOrEmpty(CommentError))
+                    {
+                        <div class="text-danger mt-2">@CommentError</div>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @onclick="CancelComment" disabled="@IsLoading">Cancel</button>
+                    <button class="btn btn-primary" @onclick="ConfirmAction" disabled="@IsLoading">Confirm</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
 @code {
     [Parameter]
     public Guid requestId { get; set; }
@@ -256,6 +282,14 @@ else
     private bool ShowApproveButton => ButtonsVisible;
     private bool ShowRejectButton => ButtonsVisible;
     private bool ShowReturnButton => ButtonsVisible;
+
+    // comment modal state
+    private bool ShowCommentModal { get; set; }
+    private string ActionPending { get; set; } = string.Empty; // "Reject" or "Return"
+    private string CommentText { get; set; } = string.Empty;
+    private string? CommentError { get; set; }
+
+    private string ModalTitle => ActionPending == "Reject" ? "Reject request — add comment" : ActionPending == "Return" ? "Return request — add comment" : "Add comment";
 
     protected override async Task OnParametersSetAsync()
     {
@@ -428,6 +462,108 @@ else
         }
     }
 
+    void PromptReject()
+    {
+        ActionPending = "Reject";
+        CommentText = string.Empty;
+        CommentError = null;
+        ShowCommentModal = true;
+    }
+
+    void PromptReturn()
+    {
+        ActionPending = "Return";
+        CommentText = string.Empty;
+        CommentError = null;
+        ShowCommentModal = true;
+    }
+
+    void CancelComment()
+    {
+        ShowCommentModal = false;
+        ActionPending = string.Empty;
+        CommentText = string.Empty;
+        CommentError = null;
+    }
+
+    private async Task ConfirmAction()
+    {
+        // require a comment
+        if (string.IsNullOrWhiteSpace(CommentText))
+        {
+            CommentError = "Please enter a comment.";
+            return;
+        }
+
+        IsLoading = true;
+        try
+        {
+            var req = await Db.ContractorRequests.FirstOrDefaultAsync(r => r.RequestId == requestId);
+            if (req is null)
+            {
+                await JS.InvokeVoidAsync("alert", "Request not found.");
+                return;
+            }
+
+            if (ActionPending == "Reject")
+            {
+                req.Status = "Cancelled";
+                req.CancelledAt = DateTime.UtcNow;
+                req.Comments = CommentText;
+            }
+            else if (ActionPending == "Return")
+            {
+                req.Status = "Draft";
+                req.Comments = CommentText;
+            }
+            else
+            {
+                // unknown action
+                return;
+            }
+
+            await Db.SaveChangesAsync();
+
+            // update UI
+            StatusText = req.Status;
+            StatusBadgeClass = req.Status switch
+            {
+                "Approved" => "bg-primary",
+                "Cancelled" => "bg-danger",
+                "Draft" => "bg-warning",
+                _ => "bg-secondary"
+            };
+
+            // hide modal and reload display
+            ShowCommentModal = false;
+            ActionPending = string.Empty;
+            CommentText = string.Empty;
+            CommentError = null;
+
+            await OnParametersSetAsync();
+
+            try
+            {
+                if (req.Status == "Cancelled")
+                    await JS.InvokeVoidAsync("alert", "Request rejected.");
+                else if (req.Status == "Draft")
+                    await JS.InvokeVoidAsync("alert", "Request returned for changes.");
+            }
+            catch
+            {
+                // ignore JS errors
+            }
+        }
+        catch
+        {
+            await JS.InvokeVoidAsync("alert", "Failed to perform action.");
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
     private async Task ApproveRequest()
     {
         var confirmed = await JS.InvokeAsync<bool>("confirm", "Approve this request?");
@@ -466,91 +602,6 @@ else
         catch
         {
             await JS.InvokeVoidAsync("alert", "Failed to approve request.");
-        }
-        finally
-        {
-            IsLoading = false;
-        }
-    }
-
-    private async Task RejectRequest()
-    {
-        var confirmed = await JS.InvokeAsync<bool>("confirm", "Reject this request? This action cannot be undone.");
-        if (!confirmed) return;
-
-        IsLoading = true;
-        try
-        {
-            var req = await Db.ContractorRequests.FirstOrDefaultAsync(r => r.RequestId == requestId);
-            if (req is null)
-            {
-                await JS.InvokeVoidAsync("alert", "Request not found.");
-                return;
-            }
-
-            req.Status = "Cancelled";
-            req.CancelledAt = DateTime.UtcNow;
-            await Db.SaveChangesAsync();
-
-            StatusText = req.Status;
-            StatusBadgeClass = "bg-danger";
-
-            await OnParametersSetAsync();
-
-            try
-            {
-                await JS.InvokeVoidAsync("alert", "Request rejected.");
-            }
-            catch
-            {
-                // ignore JS errors
-            }
-        }
-        catch
-        {
-            await JS.InvokeVoidAsync("alert", "Failed to reject request.");
-        }
-        finally
-        {
-            IsLoading = false;
-        }
-    }
-
-    private async Task ReturnRequest()
-    {
-        var confirmed = await JS.InvokeAsync<bool>("confirm", "Return this request for changes?");
-        if (!confirmed) return;
-
-        IsLoading = true;
-        try
-        {
-            var req = await Db.ContractorRequests.FirstOrDefaultAsync(r => r.RequestId == requestId);
-            if (req is null)
-            {
-                await JS.InvokeVoidAsync("alert", "Request not found.");
-                return;
-            }
-
-            req.Status = "Draft";
-            await Db.SaveChangesAsync();
-
-            StatusText = req.Status;
-            StatusBadgeClass = "bg-warning";
-
-            await OnParametersSetAsync();
-
-            try
-            {
-                await JS.InvokeVoidAsync("alert", "Request returned for changes.");
-            }
-            catch
-            {
-                // ignore JS errors
-            }
-        }
-        catch
-        {
-            await JS.InvokeVoidAsync("alert", "Failed to return request.");
         }
         finally
         {
