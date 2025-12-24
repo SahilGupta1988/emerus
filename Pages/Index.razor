@@ -92,6 +92,7 @@
                     <th>Vendor</th>
                     <th>Facility</th>
                     <th>Start Date</th>
+                    <th>Comments</th>
                     <th>Status</th>
                     <th class="text-end">Actions</th>
                 </tr>
@@ -100,7 +101,7 @@
                 @if (!PagedRows.Any())
                 {
                     <tr>
-                        <td colspan="6" class="text-center p-4">
+                        <td colspan="7" class="text-center p-4">
                             <div class="text-muted">No matching requests found.</div>
                         </td>
                     </tr>
@@ -114,6 +115,7 @@
                             <td>@row.VendorName</td>
                             <td>@row.Facility</td>
                             <td>@row.StartDate.ToShortDateString()</td>
+                            <td title="@row.Comments" class="text-truncate" style="max-width:28ch;">@Truncate(row.Comments, 80)</td>
                             <td><span class="badge @GetStatusBadgeClass(row.Status)">@row.Status</span></td>
                             <td class="text-end">
                                 @if (!IsFinalStatus(row.Status))
@@ -208,10 +210,17 @@
         font-size: 1rem;
         margin: 0;
     }
+
+    /* ensure comment column truncation shows ellipsis */
+    td.text-truncate {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
 </style>
 
 @code {
-    public record DashboardRow(Guid Id, string ContractorName, string VendorName, string Facility, DateTime StartDate, string Status, DateTime CreatedAt);
+    public record DashboardRow(Guid Id, string ContractorName, string VendorName, string Facility, DateTime StartDate, string Status, DateTime CreatedAt, string? Comments);
 
     // populated from database on initialization
     private List<DashboardRow> MockData { get; set; } = new();
@@ -240,7 +249,8 @@
                     ? (r.ContractorPerson.StartDate ?? r.CreatedAt)
                     : r.CreatedAt),
                 r.Status,
-                r.CreatedAt
+                r.CreatedAt,
+                r.Comments ?? string.Empty
             ))
             .ToListAsync();
     }
@@ -325,5 +335,12 @@
     {
         // navigate to onboarding/new in edit mode using query parameter the page already supports
         Navigation.NavigateTo($"/onboarding/new?editId={id}");
+    }
+
+    private static string Truncate(string? value, int maxLength)
+    {
+        if (string.IsNullOrEmpty(value)) return string.Empty;
+        if (value.Length <= maxLength) return value;
+        return value.Substring(0, maxLength - 1).TrimEnd() + "…";
     }
 }
