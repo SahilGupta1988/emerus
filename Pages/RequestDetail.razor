@@ -42,9 +42,19 @@ else
                 <div class="mt-2 d-flex gap-2 justify-content-end">
                     <button class="btn btn-outline-secondary btn-sm" @onclick="GoBack">Back</button>
                     <button class="btn btn-light btn-sm" @onclick="Print">Print</button>
-                    <button class="btn btn-success btn-sm" @onclick="ApproveRequest" disabled="@IsLoading">Approve</button>
-                    <button class="btn btn-danger btn-sm" @onclick="RejectRequest" disabled="@IsLoading">Reject</button>
-                    <button class="btn btn-warning btn-sm" @onclick="ReturnRequest" disabled="@IsLoading">Return</button>
+
+                    @if (ShowApproveButton)
+                    {
+                        <button class="btn btn-success btn-sm" @onclick="ApproveRequest" disabled="@IsLoading">Approve</button>
+                    }
+                    @if (ShowRejectButton)
+                    {
+                        <button class="btn btn-danger btn-sm" @onclick="RejectRequest" disabled="@IsLoading">Reject</button>
+                    }
+                    @if (ShowReturnButton)
+                    {
+                        <button class="btn btn-warning btn-sm" @onclick="ReturnRequest" disabled="@IsLoading">Return</button>
+                    }
                 </div>
             </div>
         </div>
@@ -72,10 +82,7 @@ else
                         </dl>
                     </div>
                     <div class="card-footer d-flex justify-content-between">
-                        <div>
-                            <small class="text-muted">Request Id</small>
-                            <div class="small text-break">@requestId</div>
-                        </div>
+                        
                         <div>
                             <small class="text-muted">Status</small>
                             <div><span class="badge @StatusBadgeClass">@StatusText</span></div>
@@ -242,6 +249,13 @@ else
     private string StatusBadgeClass { get; set; } = "bg-secondary";
     private DateTime CreatedAt { get; set; }
     private DateTime? SubmittedAt { get; set; }
+
+    // Button visibility: hide all three buttons once the request is in a final state:
+    // final states considered: "Approved", "Cancelled", "Draft"
+    private bool ButtonsVisible => StatusText != "Approved" && StatusText != "Cancelled" && StatusText != "Draft";
+    private bool ShowApproveButton => ButtonsVisible;
+    private bool ShowRejectButton => ButtonsVisible;
+    private bool ShowReturnButton => ButtonsVisible;
 
     protected override async Task OnParametersSetAsync()
     {
@@ -437,8 +451,17 @@ else
             StatusText = req.Status;
             StatusBadgeClass = "bg-primary";
 
-            // reload display data
+            // reload display data so ButtonsVisible re-evaluates
             await OnParametersSetAsync();
+
+            try
+            {
+                await JS.InvokeVoidAsync("alert", "Request approved successfully.");
+            }
+            catch
+            {
+                // ignore JS errors
+            }
         }
         catch
         {
@@ -473,6 +496,15 @@ else
             StatusBadgeClass = "bg-danger";
 
             await OnParametersSetAsync();
+
+            try
+            {
+                await JS.InvokeVoidAsync("alert", "Request rejected.");
+            }
+            catch
+            {
+                // ignore JS errors
+            }
         }
         catch
         {
@@ -506,6 +538,15 @@ else
             StatusBadgeClass = "bg-warning";
 
             await OnParametersSetAsync();
+
+            try
+            {
+                await JS.InvokeVoidAsync("alert", "Request returned for changes.");
+            }
+            catch
+            {
+                // ignore JS errors
+            }
         }
         catch
         {
