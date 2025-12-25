@@ -1,4 +1,6 @@
 @using Emerus.ETM.Admin.Data
+@attribute [Authorize(Roles = "Approver,Requestor")]
+
 @using Emerus.ETM.Admin.Pages
 @using System.Text.RegularExpressions
 @using Microsoft.AspNetCore.Components.Forms

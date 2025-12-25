@@ -1,3 +1,5 @@
+@attribute [Authorize(Roles = "Approver,Requestor")]
+
 <div class="card-section">
     <h5>Compliance</h5>
     <p class="text-muted">Upload required network usage, identity verification, and confidentiality forms. This is a mock layout.</p>
@@ -11,21 +13,14 @@
         @foreach (var d in Documents)
         {
             <li class="list-group-item d-flex justify-content-between align-items-center">
-                <span>@d</span>
+                <span>@d.FileName</span>
                 <span class="badge bg-success">Uploaded</span>
+
+                <button class="btn btn-sm btn-outline-danger"
+                        @onclick="() => DeleteDocument(d)">
+                    Delete
+                </button>
             </li>
         }
     </ul>
 </div>
-
-@code {
-    private List<string> Documents = new();
-
-    private void OnFileChange(InputFileChangeEventArgs e)
-    {
-        foreach (var file in e.GetMultipleFiles())
-        {
-            Documents.Add(file.Name);
-        }
-    }
-}

@@ -8,6 +8,7 @@
 @inject AppDbContext Db
 @inject NavigationManager Navigation
 @inject IJSRuntime JS
+@attribute [Authorize(Roles = "Approver,Requestor")]
 
 <PageTitle>New Contractor</PageTitle>
 
@@ -96,6 +97,12 @@
     </div>
 </div>
 
+@using Emerus.ETM.Admin.Pages.AccessStep
+@using Emerus.ETM.Admin.Pages.BadgeStep
+@using Emerus.ETM.Admin.Pages.ComplianceStep
+@using Emerus.ETM.Admin.Pages.DemographicsStep
+@using Emerus.ETM.Admin.Pages.HardwareStep
+@using Emerus.ETM.Admin.Pages.JobStep
 @code {
 
     private List<string> Steps = new()

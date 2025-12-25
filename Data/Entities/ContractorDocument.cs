@@ -38,6 +38,7 @@ namespace Emerus.ETM.Admin.Data
 
         [MaxLength(512)]
         public string? Notes { get; set; }
+        public bool? Archived { get; set; }
 
         // Navigation property (FK -> etm.ContractorRequest.RequestId)
         [ForeignKey(nameof(RequestId))]

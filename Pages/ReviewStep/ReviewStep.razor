@@ -6,6 +6,7 @@
 @using Microsoft.EntityFrameworkCore
 @using Microsoft.AspNetCore.Components
 @inject AppDbContext Db
+@attribute [Authorize(Roles = "Approver,Requestor")]
 
 <div class="card-section">
     <div class="d-flex justify-content-between align-items-start mb-2">

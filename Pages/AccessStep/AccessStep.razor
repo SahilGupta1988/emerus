@@ -1,0 +1,66 @@
+﻿@using Emerus.ETM.Admin.Data
+@using Emerus.ETM.Admin.Pages
+@using System.Data
+@using System.Data.Common
+@using System.Linq
+@using Microsoft.EntityFrameworkCore
+@inject AppDbContext Db
+@attribute [Authorize(Roles = "Approver,Requestor")]
+
+<div class="card-section">
+    <h5>Access Requests</h5>
+    <p class="text-muted">Select the RBAC groups or application roles needed. This is mocked data for UI layout only.</p>
+
+    <div class="row">
+        <div class="col-md-5">
+            <label class="form-label">Available Targets</label>
+
+            <div class="input-group mb-2">
+                <input class="form-control form-control-sm" placeholder="Filter..." @bind="FilterText" />
+                <button class="btn btn-sm btn-outline-secondary" type="button" @onclick="ClearFilter">Clear</button>
+            </div>
+
+            <ul class="list-group" style="min-height: 200px; max-height: 320px; overflow:auto;">
+                @foreach (var target in FilteredAvailableTargets)
+                {
+                    var isSelected = SelectedAvailableTargets.Contains(target.TargetId);
+                    <li class="list-group-item d-flex justify-content-between align-items-center @(isSelected ? "active" : "")"
+                        role="button"
+                        @onclick="() => ToggleAvailableSelection(target.TargetId)"
+                        aria-pressed="@(isSelected)">
+                        <span>@target.DisplayName</span>
+                        <small class="text-muted">@target.TargetId.ToString()</small>
+                    </li>
+                }
+            </ul>
+        </div>
+
+        <div class="col-md-2 d-flex flex-column align-items-center justify-content-center">
+            <div class="d-grid gap-2 w-100">
+                <button class="btn btn-sm btn-primary" @onclick="AddSelected" title="Add selected">Add →</button>
+                <button class="btn btn-sm btn-outline-primary" @onclick="AddAll" title="Add all">Add all →</button>
+                <button class="btn btn-sm btn-outline-danger" @onclick="RemoveSelected" title="Remove selected">← Remove</button>
+                <button class="btn btn-sm btn-danger" @onclick="RemoveAll" title="Remove all">← Remove all</button>
+            </div>
+        </div>
+
+        <div class="col-md-5">
+            <label class="form-label">Requested Targets</label>
+
+            <ul class="list-group" style="min-height: 200px; max-height: 320px; overflow:auto;">
+                @foreach (var rt in Model.RequestedTargets)
+                {
+                    var display = AvailableTargets.FirstOrDefault(a => a.TargetId == rt.TargetId)?.DisplayName ?? rt.TargetId.ToString();
+                    var isSel = SelectedRequestedTargets.Contains(rt.TargetId);
+                    <li class="list-group-item d-flex justify-content-between align-items-center @(isSel ? "active" : "")"
+                        role="button"
+                        @onclick="() => ToggleRequestedSelection(rt.TargetId)"
+                        aria-pressed="@(isSel)">
+                        <span>@display</span>
+                        <small class="text-muted">@rt.TargetId.ToString()</small>
+                    </li>
+                }
+            </ul>
+        </div>
+    </div>
+</div>

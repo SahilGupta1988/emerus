@@ -1,4 +1,5 @@
-@page "/"
+@page "/dashboard"
+@attribute [Authorize(Roles = "Approver,Requestor")]
 
 @using Emerus.ETM.Admin.Data
 @using Microsoft.EntityFrameworkCore

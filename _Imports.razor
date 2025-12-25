@@ -1,4 +1,5 @@
 @using System.Net.Http
+@using Emerus.ETM.Admin.Services.Interfaces
 @using Microsoft.AspNetCore.Components.Forms
 @using Microsoft.AspNetCore.Components.Routing
 @using Microsoft.AspNetCore.Components.Web
@@ -6,3 +7,16 @@
 @using Microsoft.JSInterop
 @using Emerus.ETM.Admin
 @using Emerus.ETM.Admin.Shared
+@using Microsoft.AspNetCore.Authorization
+@inject NavigationManager Nav
+@using Microsoft.AspNetCore.Components.Authorization
+@inject AuthenticationStateProvider AuthStateProvider
+@inject NavigationManager Navigation
+@using System.Security.Claims
+@using Emerus.ETM.Admin.Pages
+@using Emerus.ETM.Admin.Models.Request
+@inject IFileService _fileService
+@using Emerus.ETM.Admin.Data
+@inject AppDbContext Db
+@inject NavigationManager Navigation
+@using Emerus.ETM.Admin.Pages.RedirectToLogin
