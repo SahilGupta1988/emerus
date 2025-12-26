@@ -1,26 +1,96 @@
-@attribute [Authorize(Roles = "Approver,Requestor")]
+﻿@attribute [Authorize(Roles = "Approver,Requestor")]
 
-<div class="card-section">
-    <h5>Compliance</h5>
-    <p class="text-muted">Upload required network usage, identity verification, and confidentiality forms. This is a mock layout.</p>
+<div class="card shadow-sm">
+    <div class="card-body">
+        <h5 class="card-title mb-1">Compliance</h5>
+        <p class="text-muted small mb-3">
+            Upload required network usage, identity verification, and confidentiality forms. This is a mock layout.
+        </p>
 
-    <div class="mb-3">
-        <label class="form-label">Upload Documents</label>
-        <InputFile OnChange="OnFileChange" />
-    </div>
+        <div class="mb-3">
+            <label class="form-label fw-semibold">Upload Documents</label>
 
-    <ul class="list-group">
-        @foreach (var d in Documents)
+            <div class="upload-area mb-2 p-3 rounded border d-flex align-items-center justify-content-between"
+                 role="button"
+                 title="Click to select files">
+                <div class="d-flex align-items-center gap-3">
+                    <span class="upload-icon fs-3">📁</span>
+                    <div>
+                        <div class="fw-medium">Click to choose files or drag them here</div>
+                        <div class="text-muted small">Accepted: .pdf, .docx, .jpg — max file size depends on your account</div>
+                    </div>
+                </div>
+
+                <label class="btn btn-sm btn-outline-primary mb-0">
+                    Browse
+                    <InputFile OnChange="OnFileChange" class="visually-hidden" />
+                </label>
+            </div>
+        </div>
+
+        @if (Documents is not null && Documents.Any())
         {
-            <li class="list-group-item d-flex justify-content-between align-items-center">
-                <span>@d.FileName</span>
-                <span class="badge bg-success">Uploaded</span>
+            <ul class="list-group list-group-flush">
+                @foreach (var d in Documents)
+                {
+                    <li class="list-group-item d-flex gap-3 align-items-center">
+                        <div class="file-meta d-flex align-items-center" style="min-width:0;">
+                            <span class="file-icon me-2">📄</span>
+                            <div class="text-truncate" style="max-width: 60vw;">
+                                <div class="fw-medium text-truncate">@d.FileName</div>
+                                @* Optional additional metadata lines can go here (size/date) if available *@
+                            </div>
+                        </div>
 
-                <button class="btn btn-sm btn-outline-danger"
-                        @onclick="() => DeleteDocument(d)">
-                    Delete
-                </button>
-            </li>
+                        <div class="ms-auto d-flex align-items-center gap-2">
+                            <span class="badge bg-success">Uploaded</span>
+
+                            <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteDocument(d)" aria-label="Delete @d.FileName">
+                                Delete
+                            </button>
+                        </div>
+                    </li>
+                }
+            </ul>
         }
-    </ul>
+        else
+        {
+            <div class="text-center text-muted small py-3">
+                No documents uploaded yet.
+            </div>
+        }
+    </div>
 </div>
+
+<style>
+    .upload-area {
+        background-color: var(--bs-body-bg);
+        transition: box-shadow .15s ease, border-color .15s ease;
+        cursor: pointer;
+    }
+
+    .upload-area:hover {
+        box-shadow: 0 2px 8px rgba(0,0,0,.05);
+        border-color: rgba(13,110,253,.25);
+    }
+
+    .upload-icon {
+        width: 2rem;
+        height: 2rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .file-icon {
+        display: inline-block;
+        width: 28px;
+        text-align: center;
+    }
+
+    .text-truncate {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+</style>
