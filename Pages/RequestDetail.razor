@@ -242,13 +242,14 @@ else
                                             <li class="list-group-item d-flex gap-3 align-items-center">
                                                 <div class="file-meta d-flex align-items-center" style="min-width:0;">
                                                     <span class="file-icon me-2">📄</span>
-                                                    <div class="text-truncate" style="max-width: 60vw;">
+                                                    <div class="text-truncate" style="max-width: 50vw;">
                                                         <div class="fw-medium text-truncate">@d.FileName</div>
                                                         <div class="text-muted small">@d.DocumentType @if(!string.IsNullOrWhiteSpace(d.UploadedByUpn)){<span> · @d.UploadedByUpn</span>} <span> · @d.UploadedAt.ToLocalTime().ToString("g")</span></div>
                                                     </div>
                                                 </div>
 
                                                 <div class="ms-auto d-flex align-items-center gap-2">
+                                                    <a class="btn btn-sm btn-outline-primary" href="@($"/api/files/download/{d.DocumentId}")" target="_blank" rel="noopener" title="Download @d.FileName">Download</a>
                                                     <span class="badge bg-success">Uploaded</span>
                                                 </div>
                                             </li>
