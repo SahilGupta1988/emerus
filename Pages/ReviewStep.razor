@@ -261,6 +261,46 @@
                 </div>
             </div>
         </div>
+
+        <!-- Compliance (documents) -->
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <strong>Compliance</strong>
+                    @if (OnEditStep.HasDelegate)
+                    {
+                        <button class="btn btn-sm btn-outline-primary" @onclick="(() => OnEditStep.InvokeAsync(5))" aria-label="Edit compliance">Edit</button>
+                    }
+                </div>
+                <div class="card-body">
+                    @if (ComplianceDocuments is null || !ComplianceDocuments.Any())
+                    {
+                        <p class="text-muted mb-0">No documents uploaded.</p>
+                    }
+                    else
+                    {
+                        <ul class="list-group list-group-flush">
+                            @foreach (var d in ComplianceDocuments)
+                            {
+                                <li class="list-group-item d-flex gap-3 align-items-center">
+                                    <div class="file-meta d-flex align-items-center" style="min-width:0;">
+                                        <span class="file-icon me-2">📄</span>
+                                        <div class="text-truncate" style="max-width: 60vw;">
+                                            <div class="fw-medium text-truncate">@d.FileName</div>
+                                            <div class="text-muted small">@d.DocumentType - @d.UploadedByUpn - <small>@(d.UploadedAt.ToLocalTime().ToString("g"))</small></div>
+                                        </div>
+                                    </div>
+
+                                    <div class="ms-auto d-flex align-items-center gap-2">
+                                        <span class="badge bg-success">Uploaded</span>
+                                    </div>
+                                </li>
+                            }
+                        </ul>
+                    }
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -287,6 +327,13 @@
     // Optional callback so parent page (OnboardingNew) can jump to a step when user clicks Edit
     [Parameter]
     public EventCallback<int> OnEditStep { get; set; }
+
+    // New: saved request id is used to load compliance documents for review
+    [Parameter]
+    public Guid SavedRequestId { get; set; }
+
+    // Documents loaded from FileService
+    private List<ContractorDocument> ComplianceDocuments { get; set; } = new();
 
     protected override async Task OnParametersSetAsync()
     {
@@ -335,6 +382,24 @@
                     await conn.CloseAsync();
                 }
             }
+        }
+
+        // Load compliance documents for the provided SavedRequestId (if available)
+        try
+        {
+            if (SavedRequestId != Guid.Empty)
+            {
+                // _fileService is injected via _Imports.razor as IFileService _fileService
+                ComplianceDocuments = await _fileService.GetDocumentByRequestIdAsync(SavedRequestId).ConfigureAwait(false);
+            }
+            else
+            {
+                ComplianceDocuments = new List<ContractorDocument>();
+            }
+        }
+        catch
+        {
+            ComplianceDocuments = new List<ContractorDocument>();
         }
     }
 }
