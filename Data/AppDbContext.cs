@@ -17,6 +17,7 @@ namespace Emerus.ETM.Admin.Data
         public DbSet<ContractorHardwareRequest> ContractorHardwareRequest { get; set; } = null!;
         public DbSet<ContractorAccessRequest> ContractorAccessRequest { get; set; } = null!;
         public DbSet<ContractorDocument> ContractorDocument { get; set; } = null!;
+        
 
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)

@@ -5,9 +5,12 @@
 @using System.Collections.Generic
 @using Microsoft.AspNetCore.Components
 @using System.Linq
+@using static Emerus.ETM.Admin.Pages.AccessStep.AccessStep
+@using static Emerus.ETM.Admin.Shared.Header
 @inject AppDbContext Db
 @inject NavigationManager Navigation
 @inject IJSRuntime JS
+@inject ICommonService _commonService
 @attribute [Authorize(Roles = "Approver,Requestor")]
 
 <PageTitle>New Contractor</PageTitle>
@@ -433,18 +436,74 @@
 
         try
         {
+            // resolve current user email from the shared common service (same source Header.razor uses)
+            string? requesterUpn = null;
+            Guid resolvedUserId = Guid.Empty;
+            try
+            {
+                var currentUser = _commonService is not null ? await _commonService.GetCurrentUserAsync() : null;
+                if (currentUser?.IsAuthenticated == true && !string.IsNullOrWhiteSpace(currentUser.UserEmail))
+                {
+                    requesterUpn = currentUser.UserEmail.Trim();
+                }
+            }
+            catch
+            {
+                // non-fatal: fall back to null if service call fails
+                requesterUpn = null;
+            }
+
+            // If we can resolve requesterUpn, try to find corresponding user in iam.Users
+            if (!string.IsNullOrWhiteSpace(requesterUpn))
+            {
+                try
+                {
+                    var normalizedUpn = requesterUpn.ToLowerInvariant();
+
+                    // Try to find an existing user
+                    var user = await Db.Set<User>()
+                                       .FirstOrDefaultAsync(u => u.UPN.ToLower() == normalizedUpn);
+
+                    if (user is not null)
+                    {
+                        resolvedUserId = user.UserId;
+                    }
+                    else
+                    {
+                        // No user found - insert a new iam.User row and use its id
+                        var newUser = new User
+                        {
+                            UserId = Guid.NewGuid(),
+                            UPN = requesterUpn,
+                            Enabled = true,
+                            CreatedAt = DateTime.UtcNow,
+                            UpdatedAt = DateTime.UtcNow
+                        };
+
+                        Db.Set<User>().Add(newUser);
+                        await Db.SaveChangesAsync();
+
+                        resolvedUserId = newUser.UserId;
+                    }
+                }
+                catch
+                {
+                    // swallow DB lookup/insert exceptions and leave resolvedUserId as Guid.Empty
+                }
+            }
+
             // If we already have a SavedRequestId, update the existing request/person; otherwise create new
             if (SavedRequestId == Guid.Empty)
             {
                 var request = new ContractorRequest
                 {
                     RequestId = Guid.NewGuid(),
-                    RequestedByUpn = $"{Demographics.FirstName} {Demographics.LastName}",
+                    RequestedByUpn = requesterUpn,
                     PartnerCode = "AGENCY1",
                     RequestType = "Requestor",
                     CreatedAt = DateTime.UtcNow,
                     Status = "Draft",
-                    UserId = Guid.Parse("6116088C-850F-4C38-A342-22CCE2071DC3")
+                    UserId = resolvedUserId
                 };
 
                 var person = new ContractorPerson
@@ -501,7 +560,16 @@
 
                 if (existingRequest is not null)
                 {
-                    // existingRequest.UpdatedAt = DateTime.UtcNow;
+                    // Optionally update RequestedByUpn/UserId when editing an existing draft
+                    if (!string.IsNullOrWhiteSpace(requesterUpn))
+                    {
+                        existingRequest.RequestedByUpn = requesterUpn;
+                    }
+
+                    if (resolvedUserId != Guid.Empty)
+                    {
+                        existingRequest.UserId = resolvedUserId;
+                    }
                 }
 
                 await Db.SaveChangesAsync();
