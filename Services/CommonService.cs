@@ -36,7 +36,9 @@ namespace Emerus.ETM.Admin.Services
 
                 UserEmail =
                     user.FindFirst("preferred_username")?.Value ??
-                    user.FindFirst(ClaimTypes.Email)?.Value
+                    user.FindFirst(ClaimTypes.Email)?.Value,
+
+                Role = user.FindFirst(ClaimTypes.Role)?.Value
             };
         }
     }
