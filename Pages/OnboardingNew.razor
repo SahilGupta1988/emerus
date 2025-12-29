@@ -17,6 +17,12 @@
     <p class="text-muted">Enter contractor details and onboarding requirements.</p>
 </div>
 
+@* Show validation errors at the top of the page *@
+@if (HasValidationErrors && !string.IsNullOrEmpty(SubmitError))
+{
+    <div class="alert alert-danger mt-3">@SubmitError</div>
+}
+
 <div class="card mt-3">
     <div class="card-body">
         <ul class="nav nav-pills mb-3 wizard-steps">
@@ -91,7 +97,9 @@
                 }
             </div>
         </div>
-        @if (!string.IsNullOrEmpty(SubmitError))
+
+        @* Keep non-validation errors shown near the action area *@
+        @if (!string.IsNullOrEmpty(SubmitError) && !HasValidationErrors)
         {
             <div class="alert alert-danger mt-3">@SubmitError</div>
         }
@@ -136,6 +144,9 @@
 
     // State to show loader / prevent double-click while performing Next operation
     private bool IsProcessingNext { get; set; }
+
+    // New: flag to indicate validation errors that should appear at the top of the page
+    private bool HasValidationErrors { get; set; } = false;
 
     protected override async Task OnParametersSetAsync()
     {
@@ -252,6 +263,7 @@
 
         IsProcessingNext = true;
         SubmitError = null;
+        HasValidationErrors = false;
         StateHasChanged();
 
         try
@@ -316,6 +328,9 @@
     {
         if (IsProcessingNext) return;
 
+        // reset validation summary for draft saves
+        HasValidationErrors = false;
+
         try
         {
             // Save draft of current step - keep previous behavior but do not navigate
@@ -357,6 +372,7 @@
     {
         IsSubmitting = true;
         SubmitError = null;
+        HasValidationErrors = false;
 
         try
         {
@@ -392,6 +408,7 @@
     async Task<bool> SaveDemographicDetails()
     {
         SubmitError = null;
+        HasValidationErrors = false;
 
         // Validate the Demographics model using DataAnnotations (and IValidatableObject)
         var validationContext = new ValidationContext(Demographics);
@@ -408,20 +425,7 @@
                 .ToList();
 
             SubmitError = "Validation errors: " + string.Join(" | ", messages);
-
-            // show a popup alert so the user is immediately notified
-            try
-            {
-                if (JS is not null)
-                {
-                    // Use a simple alert; if you prefer a styled modal, replace with custom modal logic
-                    await JS.InvokeVoidAsync("alert", SubmitError);
-                }
-            }
-            catch
-            {
-                // ignore JS interop errors; SubmitError will still show in the UI
-            }
+            HasValidationErrors = true;
 
             StateHasChanged();
             return false;
@@ -503,11 +507,15 @@
                 await Db.SaveChangesAsync();
             }
 
+            // clear validation flag after successful save
+            HasValidationErrors = false;
+
             return true;
         }
         catch (Exception ex)
         {
             SubmitError = "Unable to save demographics. " + ex.Message;
+            HasValidationErrors = false;
             return false;
         }
         finally
@@ -519,6 +527,7 @@
     async Task<bool> SaveJobAndDates()
     {
         SubmitError = null;
+        HasValidationErrors = false;
 
         try
         {
@@ -578,22 +587,13 @@
     async Task<bool> SaveAccessTargets()
     {
         SubmitError = null;
+        HasValidationErrors = false;
 
         // Require at least one selected target before attempting DB work
         if (AccessInfo?.RequestedTargets == null || !AccessInfo.RequestedTargets.Any())
         {
             SubmitError = "Please select at least one access target.";
-            try
-            {
-                if (JS is not null)
-                {
-                    await JS.InvokeVoidAsync("alert", SubmitError);
-                }
-            }
-            catch
-            {
-                // ignore JS interop failures; SubmitError will still render on the page
-            }
+            HasValidationErrors = true;
 
             StateHasChanged();
             return false;
@@ -604,6 +604,7 @@
             if (SavedRequestId == Guid.Empty)
             {
                 SubmitError = "No saved request id available to update.";
+                HasValidationErrors = false;
                 return false;
             }
 
@@ -632,11 +633,13 @@
             }
 
             await Db.SaveChangesAsync();
+            HasValidationErrors = false;
             return true;
         }
         catch (Exception ex)
         {
             SubmitError = "Unable to save access targets. " + ex.Message;
+            HasValidationErrors = false;
             return false;
         }
         finally
@@ -648,6 +651,7 @@
     async Task<bool> SaveHardware()
     {
         SubmitError = null;
+        HasValidationErrors = false;
 
         try
         {
@@ -704,22 +708,13 @@
     async Task<bool> SaveBadge()
     {
         SubmitError = null;
+        HasValidationErrors = false;
 
         // If badge is requested require RequestType
         if (Badge?.NeedsBadge == true && string.IsNullOrWhiteSpace(Badge.RequestType))
         {
             SubmitError = "Please select an Access Level / Request Type before continuing.";
-            try
-            {
-                if (JS is not null)
-                {
-                    await JS.InvokeVoidAsync("alert", SubmitError);
-                }
-            }
-            catch
-            {
-                // ignore JS interop errors
-            }
+            HasValidationErrors = true;
 
             StateHasChanged();
             return false;
@@ -730,6 +725,7 @@
             if (SavedRequestId == Guid.Empty)
             {
                 SubmitError = "No saved request id available to update.";
+                HasValidationErrors = false;
                 return false;
             }
 
