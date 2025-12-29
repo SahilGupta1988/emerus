@@ -65,6 +65,17 @@ app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.UseRouting();
 
+// To Redirect to login page after logout.
+app.Use(async (context, next) =>
+{
+    if (context.Request.Path.Equals("/MicrosoftIdentity/Account/SignedOut", StringComparison.OrdinalIgnoreCase))
+    {
+        context.Response.Redirect("/");
+        return;
+    }
+    await next();
+});
+
 app.UseAuthentication();
 app.UseAuthorization();
 

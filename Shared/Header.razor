@@ -30,7 +30,7 @@
 
     protected override async Task OnInitializedAsync()
     {
-        var user = await _commonService.GetCurrentUserAsync();
+        var user = await _commonService.GetCurrentUserAsync().ConfigureAwait(false);
 
         if (user.IsAuthenticated)
         {
@@ -41,8 +41,6 @@
 
     private void Logout()
     {
-        Nav.NavigateTo(
-            "MicrosoftIdentity/Account/SignOut",
-            forceLoad: true);
+        Nav.NavigateTo("MicrosoftIdentity/Account/SignOut", forceLoad: true);
     }
 }
