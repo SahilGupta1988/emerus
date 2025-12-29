@@ -1,4 +1,4 @@
-@page "/onboarding/request/{requestId:guid}"
+﻿@page "/onboarding/request/{requestId:guid}"
 @using Emerus.ETM.Admin.Data
 @using Microsoft.EntityFrameworkCore
 @using System.Linq
@@ -109,7 +109,7 @@ else
                                     <li class="list-group-item d-flex justify-content-between align-items-start">
                                         <div>
                                             <div class="fw-semibold">@display</div>
-                                            <div class="small text-muted">@t.Environment @if(!string.IsNullOrWhiteSpace(t.ChangeType)){ <span> � @t.ChangeType</span> }</div>
+                                            <div class="small text-muted">@t.Environment @if(!string.IsNullOrWhiteSpace(t.ChangeType)){ <span> · @t.ChangeType</span> }</div>
                                         </div>
                                         <div class="text-end">
                                             <div><span class="badge bg-secondary">@t.CreatedAt.ToLocalTime().ToString("d")</span></div>
@@ -222,6 +222,44 @@ else
                             </div>
                         </div>
                     </div>
+
+                    <!-- Compliance / Documents -->
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <strong>Compliance</strong>
+                            </div>
+                            <div class="card-body">
+                                @if (ComplianceDocuments is null || !ComplianceDocuments.Any())
+                                {
+                                    <div class="text-muted">No compliance documents uploaded.</div>
+                                }
+                                else
+                                {
+                                    <ul class="list-group list-group-flush">
+                                        @foreach (var d in ComplianceDocuments)
+                                        {
+                                            <li class="list-group-item d-flex gap-3 align-items-center">
+                                                <div class="file-meta d-flex align-items-center" style="min-width:0;">
+                                                    <span class="file-icon me-2">📄</span>
+                                                    <div class="text-truncate" style="max-width: 50vw;">
+                                                        <div class="fw-medium text-truncate">@d.FileName</div>
+                                                        <div class="text-muted small">@d.DocumentType @if(!string.IsNullOrWhiteSpace(d.UploadedByUpn)){<span> · @d.UploadedByUpn</span>} <span> · @d.UploadedAt.ToLocalTime().ToString("g")</span></div>
+                                                    </div>
+                                                </div>
+
+                                                <div class="ms-auto d-flex align-items-center gap-2">
+                                                    <a class="btn btn-sm btn-outline-primary" href="@($"/api/files/download/{d.DocumentId}")" target="_blank" rel="noopener" title="Download @d.FileName">Download</a>
+                                                    <span class="badge bg-success">Uploaded</span>
+                                                </div>
+                                            </li>
+                                        }
+                                    </ul>
+                                }
+                            </div>
+                        </div>
+                    </div>
+
                 </div>
             </div>
         </div>
@@ -277,6 +315,9 @@ else
     private DateTime CreatedAt { get; set; }
     private DateTime? SubmittedAt { get; set; }
 
+    // Compliance documents for the request
+    private List<ContractorDocument> ComplianceDocuments { get; set; } = new();
+
     // Button visibility: hide all three buttons once the request is in a final state:
     // final states considered: "Approved", "Cancelled", "Draft"
     private bool ButtonsVisible => StatusText != "Approved" && StatusText != "Cancelled" && StatusText != "Draft";
@@ -290,7 +331,7 @@ else
     private string CommentText { get; set; } = string.Empty;
     private string? CommentError { get; set; }
 
-    private string ModalTitle => ActionPending == "Reject" ? "Reject request � add comment" : ActionPending == "Return" ? "Return request � add comment" : "Add comment";
+    private string ModalTitle => ActionPending == "Reject" ? "Reject request — add comment" : ActionPending == "Return" ? "Return request — add comment" : "Add comment";
 
     protected override async Task OnParametersSetAsync()
     {
@@ -437,6 +478,23 @@ else
                 {
                     await conn.CloseAsync();
                 }
+            }
+
+            // Load compliance documents for this request (uses IFileService injected via _Imports.razor)
+            try
+            {
+                if (requestId != Guid.Empty)
+                {
+                    ComplianceDocuments = await _fileService.GetDocumentByRequestIdAsync(requestId).ConfigureAwait(false);
+                }
+                else
+                {
+                    ComplianceDocuments = new List<ContractorDocument>();
+                }
+            }
+            catch
+            {
+                ComplianceDocuments = new List<ContractorDocument>();
             }
         }
         finally

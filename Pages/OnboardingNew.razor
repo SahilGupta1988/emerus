@@ -53,14 +53,15 @@
                 <BadgeStep Model="Badge" />
                 break;
             case 5:
-                <ComplianceStep />
+                <ComplianceStep SavedRequestId="SavedRequestId" />
                 break;
             case 6:
                 <ReviewStep Demographics="Demographics"
                             JobInfo="JobInfo"
                             AccessInfo="AccessInfo"
                             Hardware="Hardware"
-                            Badge="Badge" />
+                            Badge="Badge"
+                            SavedRequestId="SavedRequestId" />
                 break;
         }
 
@@ -350,7 +351,7 @@
     }
 
     private bool IsSubmitting;
-    private string? SubmitError;
+    public string? SubmitError;
 
     void Submit()
     {

@@ -7,16 +7,43 @@ namespace Emerus.ETM.Admin.Pages.ComplianceStep
 {
     public partial class ComplianceStep : ComponentBase
     {
+        // Parameter supplied by parent (OnboardingNew.razor)
+        [Parameter]
+        public Guid SavedRequestId { get; set; }
+
+        // track last seen id so we only reload when it changes
+        private Guid _lastSeenRequestId = Guid.Empty;
+
         protected override async Task OnInitializedAsync()
         {
-            await GetDocumentByRequestId();
+            // If parent already provided a SavedRequestId, load documents on init.
+            if (SavedRequestId != Guid.Empty)
+            {
+                _lastSeenRequestId = SavedRequestId;
+                await GetDocumentByRequestId();
+            }
+            else
+            {
+                await GetDocumentByRequestId();
+            }
+        }
+
+        protected override async Task OnParametersSetAsync()
+        {
+            // Called when parent updates parameters (e.g. after saving a draft)
+            if (SavedRequestId != Guid.Empty && SavedRequestId != _lastSeenRequestId)
+            {
+                _lastSeenRequestId = SavedRequestId;
+                await GetDocumentByRequestId();
+            }
         }
 
         private List<ContractorDocument> Documents = new();
-        private Guid ContractorId = Guid.Parse("11111111-1111-1111-1111-111111111111");
+        //private Guid ContractorId = Guid.Parse("11111111-1111-1111-1111-111111111111");
 
         private async Task OnFileChange(InputFileChangeEventArgs e)
         {
+
             foreach (var file in e.GetMultipleFiles())
             {
                 try
@@ -28,7 +55,8 @@ namespace Emerus.ETM.Admin.Pages.ComplianceStep
                         FileStream = stream,
                         FileName = file.Name,
                         DocumentType = GetDocumentType(file.Name),
-                        ContractorId = ContractorId
+                        //ContractorId = ContractorId,
+                        RequestId = SavedRequestId
                     };
 
                     await _fileService.UploadAsync(dto, "system").ConfigureAwait(false);
@@ -59,8 +87,14 @@ namespace Emerus.ETM.Admin.Pages.ComplianceStep
 
         private async Task GetDocumentByRequestId()
         {
-            Guid requestId = Guid.Parse("F9853E67-DDF6-4FEE-B5A3-C75A28BCA5F0");
-            Documents = await _fileService.GetDocumentByRequestIdAsync(requestId).ConfigureAwait(false);
+            // Use the SavedRequestId parameter passed from the parent.
+            if (SavedRequestId == Guid.Empty)
+            {
+                Documents = new List<ContractorDocument>();
+                return;
+            }
+
+            Documents = await _fileService.GetDocumentByRequestIdAsync(SavedRequestId).ConfigureAwait(false);
         }
 
         private async Task DeleteDocument(ContractorDocument document)

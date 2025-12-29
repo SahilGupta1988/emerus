@@ -20,7 +20,7 @@ namespace Emerus.ETM.Admin.Services
                 throw new Exception("Invalid file");
 
             var fileName = $"{Guid.NewGuid()}{Path.GetExtension(dto.FileName)}";
-            var blobPath = $"contractors/{dto.ContractorId}/{dto.DocumentType}/{fileName}";
+            var blobPath = $"contractors/{dto.RequestId}/{dto.DocumentType}/{fileName}";
 
             var result = await _fileRepository.UploadBlobAsync(blobPath,dto.FileStream).ConfigureAwait(false);
             if (result)
@@ -62,7 +62,8 @@ namespace Emerus.ETM.Admin.Services
             return new ContractorDocument
             {
                 DocumentId = Guid.NewGuid(),
-                RequestId = Guid.Parse("F9853E67-DDF6-4FEE-B5A3-C75A28BCA5F0"),
+                //RequestId = Guid.Parse("F9853E67-DDF6-4FEE-B5A3-C75A28BCA5F0"),
+                RequestId = dto.RequestId,
                 DocumentType = dto.DocumentType,
                 FileName = dto.FileName,
                 StorageUrl = blobPath,

@@ -1,4 +1,4 @@
-@using Emerus.ETM.Admin.Data
+﻿@using Emerus.ETM.Admin.Data
 @using Emerus.ETM.Admin.Pages
 @using System.Linq
 @using System.Data
@@ -7,7 +7,6 @@
 @using Microsoft.AspNetCore.Components
 @using static Emerus.ETM.Admin.Pages.AccessStep.AccessStep
 @inject AppDbContext Db
-@attribute [Authorize(Roles = "Approver,Requestor")]
 
 <div class="card-section">
     <div class="d-flex justify-content-between align-items-start mb-2">
@@ -49,7 +48,10 @@
                         <dd class="col-8">@((Demographics.DateOfBirth is DateTime dt) ? dt.ToShortDateString() : "-")</dd>
 
                         <dt class="col-4 text-muted">Gender</dt>
-                        <dd class="col-8">@Demographics.Gender @if(!string.IsNullOrWhiteSpace(Demographics.Identity)){ <span class="text-muted"> - @Demographics.Identity</span> }</dd>
+                        <dd class="col-8">@Demographics.Gender @if(!string.IsNullOrWhiteSpace(Demographics.Identity)){
+                        <span class="text-muted"> - @Demographics.Identity</span>
+                                                }
+</dd>
 
                         <dt class="col-4 text-muted">Address</dt>
                         <dd class="col-8">
@@ -85,7 +87,10 @@
                         <dd class="col-8">@JobInfo.Department</dd>
 
                         <dt class="col-4 text-muted">Agency / Job code</dt>
-                        <dd class="col-8">@JobInfo.AgencyName @if(!string.IsNullOrWhiteSpace(JobInfo.JobCode)){ <span class="text-muted"> - @JobInfo.JobCode</span> }</dd>
+                        <dd class="col-8">@JobInfo.AgencyName @if(!string.IsNullOrWhiteSpace(JobInfo.JobCode)){
+                        <span class="text-muted"> - @JobInfo.JobCode</span>
+                                                }
+</dd>
 
                         <dt class="col-4 text-muted">External ID</dt>
                         <dd class="col-8">@JobInfo.ExternalEmployeeId</dd>
@@ -256,80 +261,145 @@
                 </div>
             </div>
         </div>
+
+        <!-- Compliance (documents) -->
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <strong>Compliance</strong>
+                    @if (OnEditStep.HasDelegate)
+                    {
+                        <button class="btn btn-sm btn-outline-primary" @onclick="(() => OnEditStep.InvokeAsync(5))" aria-label="Edit compliance">Edit</button>
+                    }
+                </div>
+                <div class="card-body">
+                    @if (ComplianceDocuments is null || !ComplianceDocuments.Any())
+                    {
+                        <p class="text-muted mb-0">No documents uploaded.</p>
+                    }
+                    else
+                    {
+                        <ul class="list-group list-group-flush">
+                            @foreach (var d in ComplianceDocuments)
+                            {
+                                <li class="list-group-item d-flex gap-3 align-items-center">
+                                    <div class="file-meta d-flex align-items-center" style="min-width:0;">
+                                        <span class="file-icon me-2">📄</span>
+                                        <div class="text-truncate" style="max-width: 60vw;">
+                                            <div class="fw-medium text-truncate">@d.FileName</div>
+                                            <div class="text-muted small">@d.DocumentType - @d.UploadedByUpn - <small>@(d.UploadedAt.ToLocalTime().ToString("g"))</small></div>
+                                        </div>
+                                    </div>
+
+                                    <div class="ms-auto d-flex align-items-center gap-2">
+                                        <span class="badge bg-success">Uploaded</span>
+                                    </div>
+                                </li>
+                            }
+                        </ul>
+                    }
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
 @code {
-    // [Parameter]
-    // public OnboardingNew.DemographicsModel Demographics { get; set; } = default!;
+    [Parameter]
+    public OnboardingNew.DemographicsModel Demographics { get; set; } = default!;
 
-    // [Parameter]
-    // public OnboardingNew.JobModel JobInfo { get; set; } = default!;
+    [Parameter]
+    public OnboardingNew.JobModel JobInfo { get; set; } = default!;
 
-    // [Parameter]
-    // public OnboardingNew.AccessModel AccessInfo { get; set; } = default!;
+    [Parameter]
+    public OnboardingNew.AccessModel AccessInfo { get; set; } = default!;
 
-    // // Fixed: TargetCatalog is a collection of TargetCatalogModel (defined in AccessStep)
-    // [Parameter]
-    // public List<AccessStep.TargetCatalogModel> TargetCatalog { get; set; } = new();
+    // Fixed: TargetCatalog is a collection of TargetCatalogModel (defined in AccessStep)
+    [Parameter]
+    public List<TargetCatalogModel> TargetCatalog { get; set; } = new();
 
-    // [Parameter]
-    // public OnboardingNew.HardwareModel Hardware { get; set; } = default!;
+    [Parameter]
+    public OnboardingNew.HardwareModel Hardware { get; set; } = default!;
 
-    // [Parameter]
-    // public OnboardingNew.BadgeModel Badge { get; set; } = default!;
+    [Parameter]
+    public OnboardingNew.BadgeModel Badge { get; set; } = default!;
 
     // Optional callback so parent page (OnboardingNew) can jump to a step when user clicks Edit
-    // [Parameter]
-    // public EventCallback<int> OnEditStep { get; set; }
+    [Parameter]
+    public EventCallback<int> OnEditStep { get; set; }
 
-    // protected override async Task OnParametersSetAsync()
-    // {
-    //     // If parent didn't provide a catalog, load from iam.TargetCatalog
-    //     if (TargetCatalog == null || !TargetCatalog.Any())
-    //     {
-    //         var list = new List<TargetCatalogModel>();
-    //         DbConnection? conn = null;
-    //         try
-    //         {
-    //             conn = Db.Database.GetDbConnection();
-    //             await conn.OpenAsync();
+    // New: saved request id is used to load compliance documents for review
+    [Parameter]
+    public Guid SavedRequestId { get; set; }
 
-    //             using var cmd = conn.CreateCommand();
-    //             cmd.CommandText = "SELECT TargetId, DisplayName FROM iam.TargetCatalog WHERE IsActive = 1 ORDER BY DisplayName";
-    //             using var reader = await cmd.ExecuteReaderAsync();
+    // Documents loaded from FileService
+    private List<ContractorDocument> ComplianceDocuments { get; set; } = new();
 
-    //             while (await reader.ReadAsync())
-    //             {
-    //                 var item = new TargetCatalogModel();
+    protected override async Task OnParametersSetAsync()
+    {
+        // If parent didn't provide a catalog, load from iam.TargetCatalog
+        if (TargetCatalog == null || !TargetCatalog.Any())
+        {
+            var list = new List<TargetCatalogModel>();
+            DbConnection? conn = null;
+            try
+            {
+                conn = Db.Database.GetDbConnection();
+                await conn.OpenAsync();
 
-    //                 if (!reader.IsDBNull(0))
-    //                 {
-    //                     item.TargetId = reader.GetGuid(0);
-    //                 }
+                using var cmd = conn.CreateCommand();
+                cmd.CommandText = "SELECT TargetId, DisplayName FROM iam.TargetCatalog WHERE IsActive = 1 ORDER BY DisplayName";
+                using var reader = await cmd.ExecuteReaderAsync();
 
-    //                 if (!reader.IsDBNull(1))
-    //                 {
-    //                     item.DisplayName = reader.GetString(1);
-    //                 }
+                while (await reader.ReadAsync())
+                {
+                    var item = new TargetCatalogModel();
 
-    //                 list.Add(item);
-    //             }
+                    if (!reader.IsDBNull(0))
+                    {
+                        item.TargetId = reader.GetGuid(0);
+                    }
 
-    //             TargetCatalog = list;
-    //         }
-    //         catch
-    //         {
-    //             // keep TargetCatalog empty on error to keep UI resilient
-    //             TargetCatalog = new List<TargetCatalogModel>();
-    //         }
-    //         finally
-    //         {
-    //             if (conn is not null && conn.State == ConnectionState.Open)
-    //             {
-    //                 await conn.CloseAsync();
-    //             }
-    //         }
-    //     }
-    // }
+                    if (!reader.IsDBNull(1))
+                    {
+                        item.DisplayName = reader.GetString(1);
+                    }
+
+                    list.Add(item);
+                }
+
+                TargetCatalog = list;
+            }
+            catch
+            {
+                // keep TargetCatalog empty on error to keep UI resilient
+                TargetCatalog = new List<TargetCatalogModel>();
+            }
+            finally
+            {
+                if (conn is not null && conn.State == ConnectionState.Open)
+                {
+                    await conn.CloseAsync();
+                }
+            }
+        }
+
+        // Load compliance documents for the provided SavedRequestId (if available)
+        try
+        {
+            if (SavedRequestId != Guid.Empty)
+            {
+                // _fileService is injected via _Imports.razor as IFileService _fileService
+                ComplianceDocuments = await _fileService.GetDocumentByRequestIdAsync(SavedRequestId).ConfigureAwait(false);
+            }
+            else
+            {
+                ComplianceDocuments = new List<ContractorDocument>();
+            }
+        }
+        catch
+        {
+            ComplianceDocuments = new List<ContractorDocument>();
+        }
+    }
 }
