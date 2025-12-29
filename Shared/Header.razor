@@ -1,0 +1,54 @@
+﻿<nav class="navbar navbar-light bg-white border-bottom px-3">
+    <span class="navbar-brand mb-0 h6">Emerus Admin</span>
+
+    <div class="dropdown ms-auto">
+        <button class="btn btn-light dropdown-toggle d-flex align-items-center"
+                type="button"
+                data-bs-toggle="dropdown"
+                aria-expanded="false">
+            <i class="bi bi-person-circle fs-4"></i>
+        </button>
+
+        <ul class="dropdown-menu dropdown-menu-end shadow">
+            <li class="px-3 py-2">
+                <div class="fw-semibold">@UserName</div>
+                <div class="text-muted small">@UserEmail</div>
+            </li>
+            <li><hr class="dropdown-divider" /></li>
+            <li>
+                <button class="dropdown-item text-danger" @onclick="Logout">
+                    Logout
+                </button>
+            </li>
+        </ul>
+    </div>
+</nav>
+
+@code {
+    protected string? UserName;
+    protected string? UserEmail;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user.Identity?.IsAuthenticated == true)
+        {
+            UserName =
+                user.FindFirst("name")?.Value ??
+                user.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value ??
+                "Unknown User";
+            UserEmail =
+                user.FindFirst("preferred_username")?.Value ??
+                user.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value;
+        }
+    }
+
+    private void Logout()
+    {
+        Nav.NavigateTo(
+            "MicrosoftIdentity/Account/SignOut",
+            forceLoad: true);
+    }
+}

@@ -1,7 +1,13 @@
 @inherits LayoutComponentBase
 <div class="d-flex">
     <NavMenu />
+
+    <div class="flex-grow-1 d-flex flex-column">
+        <!-- Header -->
+        <Header />
+
     <div class="container-fluid p-3">
         @Body
+    </div>
     </div>
 </div>
