@@ -21,8 +21,4 @@
 	  <PackageReference Include="Microsoft.AspNetCore.Components.Authorization" Version="8.0.22" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="Models\Response\" />
-  </ItemGroup>
-
 </Project>

@@ -30,18 +30,12 @@
 
     protected override async Task OnInitializedAsync()
     {
-        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
-        var user = authState.User;
+        var user = await _commonService.GetCurrentUserAsync();
 
-        if (user.Identity?.IsAuthenticated == true)
+        if (user.IsAuthenticated)
         {
-            UserName =
-                user.FindFirst("name")?.Value ??
-                user.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value ??
-                "Unknown User";
-            UserEmail =
-                user.FindFirst("preferred_username")?.Value ??
-                user.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value;
+            UserName = user.UserName;
+            UserEmail = user.UserEmail;
         }
     }
 

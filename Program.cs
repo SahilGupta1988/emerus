@@ -51,6 +51,7 @@ builder.Services.AddControllersWithViews().AddMicrosoftIdentityUI();
 // Register application services and repositories
 builder.Services.AddScoped<IFileRepository, FileRepository>();
 builder.Services.AddScoped<IFileService, FileService>();
+builder.Services.AddScoped<ICommonService, CommonService>();
 
 var app = builder.Build();
 
