@@ -281,15 +281,12 @@
            || string.Equals(status, "Cancelled", StringComparison.OrdinalIgnoreCase);
 
     // Derived KPI values
-    private int OpenRequestsCount => MockData.Count(r => !string.Equals(r.Status, "Completed", StringComparison.OrdinalIgnoreCase)
+    private int OpenRequestsCount => MockData.Count(r => !string.Equals(r.Status, "Approved", StringComparison.OrdinalIgnoreCase)
                                                          && !string.Equals(r.Status, "Cancelled", StringComparison.OrdinalIgnoreCase));
 
-    private int CompletedThisWeekCount => MockData.Count(r => r.CreatedAt >= DateTime.UtcNow.AddDays(-7) && string.Equals(r.Status, "Completed", StringComparison.OrdinalIgnoreCase));
+    private int CompletedThisWeekCount => MockData.Count(r => r.CreatedAt >= DateTime.UtcNow.AddDays(-7) && string.Equals(r.Status, "Approved", StringComparison.OrdinalIgnoreCase));
 
-    private int PendingVendorActionCount => MockData.Count(r =>
-        r.Status?.Contains("Pending", StringComparison.OrdinalIgnoreCase) == true
-        || r.Status?.Contains("Vendor", StringComparison.OrdinalIgnoreCase) == true
-        || r.Status?.Contains("Returned", StringComparison.OrdinalIgnoreCase) == true);
+    private int PendingVendorActionCount => MockData.Count(r => r.Status?.Contains("Draft", StringComparison.OrdinalIgnoreCase) == true);
 
     private int TasksDueTodayCount => MockData.Count(r => r.StartDate.Date == DateTime.UtcNow.Date);
 
