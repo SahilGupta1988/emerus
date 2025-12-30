@@ -62,7 +62,6 @@ namespace Emerus.ETM.Admin.Services
             return new ContractorDocument
             {
                 DocumentId = Guid.NewGuid(),
-                //RequestId = Guid.Parse("F9853E67-DDF6-4FEE-B5A3-C75A28BCA5F0"),
                 RequestId = dto.RequestId,
                 DocumentType = dto.DocumentType,
                 FileName = dto.FileName,

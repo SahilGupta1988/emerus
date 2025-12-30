@@ -43,6 +43,13 @@ namespace Emerus.ETM.Admin.Pages.ComplianceStep
 
         private async Task OnFileChange(InputFileChangeEventArgs e)
         {
+            string? requesterUpn = null;
+            var currentUser = _commonService is not null ? await _commonService.GetCurrentUserAsync() : null;
+            if (currentUser?.IsAuthenticated == true && !string.IsNullOrWhiteSpace(currentUser.UserEmail))
+            {
+                requesterUpn = currentUser.UserEmail.Trim();
+                requesterUpn = requesterUpn.ToLowerInvariant();
+            }
 
             foreach (var file in e.GetMultipleFiles())
             {
@@ -59,7 +66,7 @@ namespace Emerus.ETM.Admin.Pages.ComplianceStep
                         RequestId = SavedRequestId
                     };
 
-                    await _fileService.UploadAsync(dto, "system").ConfigureAwait(false);
+                    await _fileService.UploadAsync(dto, requesterUpn).ConfigureAwait(false);
                     // Documents.Add(file.Name);
                     await GetDocumentByRequestId();
                 }
