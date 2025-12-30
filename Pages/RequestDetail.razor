@@ -672,6 +672,25 @@ else
         var confirmed = await JS.InvokeAsync<bool>("confirm", "Approve this request?");
         if (!confirmed) return;
 
+        // Ensure at least one compliance document is approved before approving request
+        try
+        {
+            var approvedCount = await Db.Set<ContractorDocument>()
+                .CountAsync(d => d.RequestId == requestId && d.Status == "Approved");
+
+            if (approvedCount == 0)
+            {
+                await JS.InvokeVoidAsync("alert", "At least one compliance document must be approved before approving the request.");
+                return;
+            }
+        }
+        catch
+        {
+            // If the check fails for some reason, prevent approving to avoid inconsistent state.
+            await JS.InvokeVoidAsync("alert", "Unable to verify document approvals. Try again later.");
+            return;
+        }
+
         IsLoading = true;
         try
         {
