@@ -55,6 +55,24 @@ namespace Emerus.ETM.Admin.Services
             return false;
         }
 
+        // Added: update document status / verification metadata
+        public async Task<bool> UpdateDocumentStatusAsync(Guid documentId, string newStatus, string verifiedByUpn, string? notes = null)
+        {
+            if (documentId == Guid.Empty) return false;
+
+            var document = await _fileRepository.GetDocumentsByDocumentId(documentId).ConfigureAwait(false);
+            if (document == null) return false;
+
+            document.Status = newStatus;
+            document.VerifiedByUpn = verifiedByUpn;
+            document.VerifiedAt = DateTime.UtcNow;
+            if (!string.IsNullOrWhiteSpace(notes))
+            {
+                document.Notes = notes;
+            }
+
+            return await _fileRepository.UpdateDocument(document).ConfigureAwait(false);
+        }
 
         #region
         private static ContractorDocument MapToContractorDocument(FileUploadDto dto, string uploadedBy, string blobPath)

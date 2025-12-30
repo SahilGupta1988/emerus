@@ -8,5 +8,6 @@ namespace Emerus.ETM.Admin.Services.Interfaces
         Task UploadAsync(FileUploadDto dto, string uploadedBy);
         Task<List<ContractorDocument>> GetDocumentByRequestIdAsync(Guid requestId);
         Task<bool> DeleteDocumentAsync(Guid documentId);
+        Task<bool> UpdateDocumentStatusAsync(Guid documentId, string newStatus, string verifiedByUpn, string? notes = null);
     }
 }

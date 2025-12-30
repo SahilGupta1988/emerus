@@ -250,7 +250,11 @@ else
 
                                                 <div class="ms-auto d-flex align-items-center gap-2">
                                                     <a class="btn btn-sm btn-outline-primary" href="@($"/api/files/download/{d.DocumentId}")" target="_blank" rel="noopener" title="Download @d.FileName">Download</a>
-                                                    <span class="badge bg-success">Uploaded</span>
+
+                                                    <button class="btn btn-sm btn-outline-success" @onclick="() => ApproveDocument(d.DocumentId)" title="Approve document" disabled="@IsLoading">Approve</button>
+                                                    <button class="btn btn-sm btn-outline-danger" @onclick="() => PromptRejectDocument(d.DocumentId)" title="Reject document" disabled="@IsLoading">Reject</button>
+
+                                                    <span class="badge @GetBadgeClass(d.Status)">@(!string.IsNullOrWhiteSpace(d.Status) ? d.Status : "Unknown")</span>
                                                 </div>
                                             </li>
                                         }
@@ -292,6 +296,32 @@ else
     </div>
 }
 
+@if (ShowDocRejectModal)
+{
+    <div class="modal d-block" tabindex="-1" style="background: rgba(0,0,0,0.5);">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Reject document — add notes</h5>
+                    <button type="button" class="btn-close" aria-label="Close" @onclick="CancelDocReject"></button>
+                </div>
+                <div class="modal-body">
+                    <label class="form-label">Notes (required)</label>
+                    <textarea class="form-control" @bind="DocRejectNotes" rows="4" placeholder="Enter reason for rejection"></textarea>
+                    @if (!string.IsNullOrEmpty(DocRejectError))
+                    {
+                        <div class="text-danger mt-2">@DocRejectError</div>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @onclick="CancelDocReject" disabled="@IsLoading">Cancel</button>
+                    <button class="btn btn-danger" @onclick="ConfirmRejectDocument" disabled="@IsLoading">Reject</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
 @code {
     [Parameter]
     public Guid requestId { get; set; }
@@ -325,19 +355,33 @@ else
     private bool ShowRejectButton => ButtonsVisible;
     private bool ShowReturnButton => ButtonsVisible;
 
-    // comment modal state
+    // comment modal state (request-level)
     private bool ShowCommentModal { get; set; }
     private string ActionPending { get; set; } = string.Empty; // "Reject" or "Return"
     private string CommentText { get; set; } = string.Empty;
     private string? CommentError { get; set; }
 
+    // document reject modal state (per-document)
+    private bool ShowDocRejectModal { get; set; }
+    private Guid PendingDocId { get; set; } = Guid.Empty;
+    private string DocRejectNotes { get; set; } = string.Empty;
+    private string? DocRejectError { get; set; }
+
     private string ModalTitle => ActionPending == "Reject" ? "Reject request — add comment" : ActionPending == "Return" ? "Return request — add comment" : "Add comment";
+    
+    private string? requesterUpn = null;
 
     protected override async Task OnParametersSetAsync()
     {
         IsLoading = true;
         IsNotFound = false;
 
+        var currentUser = _commonService is not null ? await _commonService.GetCurrentUserAsync() : null;
+        if (currentUser?.IsAuthenticated == true && !string.IsNullOrWhiteSpace(currentUser.UserEmail))
+        {
+            requesterUpn = currentUser.UserEmail.Trim();
+            requesterUpn =requesterUpn.ToLowerInvariant();
+        }
         try
         {
             var request = await Db.ContractorRequests
@@ -666,5 +710,111 @@ else
         {
             IsLoading = false;
         }
+    }
+
+    private async Task ApproveDocument(Guid documentId)
+    {
+        IsLoading = true;
+        try
+        {
+            // persist via EF to ensure DB is updated
+            var doc = await Db.Set<ContractorDocument>().FirstOrDefaultAsync(d => d.DocumentId == documentId);
+            if (doc != null)
+            {
+                doc.Status = "Approved";
+                doc.VerifiedByUpn = requesterUpn;
+                doc.VerifiedAt = DateTime.UtcNow;
+                doc.Notes = "";
+                await Db.SaveChangesAsync();
+
+                await OnParametersSetAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            await JS.InvokeVoidAsync("alert", $"Error approving document: {ex.Message}");
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    // Opens reject-notes modal for a specific document.
+    private void PromptRejectDocument(Guid documentId)
+    {
+        PendingDocId = documentId;
+        DocRejectNotes = string.Empty;
+        DocRejectError = null;
+        ShowDocRejectModal = true;
+    }
+
+    private void CancelDocReject()
+    {
+        ShowDocRejectModal = false;
+        PendingDocId = Guid.Empty;
+        DocRejectNotes = string.Empty;
+        DocRejectError = null;
+    }
+
+    private async Task ConfirmRejectDocument()
+    {
+        // require notes for rejection
+        if (string.IsNullOrWhiteSpace(DocRejectNotes))
+        {
+            DocRejectError = "Please enter notes describing the reason for rejection.";
+            return;
+        }
+
+        IsLoading = true;
+        try
+        {
+            var doc = await Db.Set<ContractorDocument>().FirstOrDefaultAsync(d => d.DocumentId == PendingDocId);
+            if (doc is null)
+            {
+                await JS.InvokeVoidAsync("alert", "Document not found.");
+                return;
+            }
+
+            doc.Status = "Rejected";
+            doc.VerifiedByUpn = requesterUpn;
+            doc.Notes = DocRejectNotes;
+            doc.VerifiedAt = DateTime.UtcNow;
+
+            await Db.SaveChangesAsync();
+
+            // close modal and refresh list
+            ShowDocRejectModal = false;
+            PendingDocId = Guid.Empty;
+            DocRejectNotes = string.Empty;
+            DocRejectError = null;
+
+            await OnParametersSetAsync();
+
+            // try { await JS.InvokeVoidAsync("alert", "Document rejected."); } catch { }
+        }
+        catch (Exception ex)
+        {
+            await JS.InvokeVoidAsync("alert", $"Error rejecting document: {ex.Message}");
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    // Returns a bootstrap badge class for a given document status.
+    // Adjust mapping to your project's conventions as needed.
+    private string GetBadgeClass(string? status)
+    {
+        return (status ?? string.Empty) switch
+        {
+            "Uploaded" => "bg-success",
+            "Approved" => "bg-primary",
+            "Rejected" => "bg-danger",
+            "Verified" => "bg-info",
+            "Archived" => "bg-secondary",
+            _ => "bg-secondary"
+        };
     }
 }
