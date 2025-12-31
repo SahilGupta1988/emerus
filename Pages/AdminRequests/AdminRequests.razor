@@ -71,7 +71,10 @@
                             <td title="@row.Comments" class="text-truncate" style="max-width:28ch;">@Truncate(row.Comments, 80)</td>
                             <td><span class="badge @GetStatusBadgeClass(row.Status)">@row.Status</span></td>
                             <td class="text-end">
-                                <a href="onboarding/request/@row.Id" class="btn btn-sm btn-outline-secondary">Open</a>
+                                @if (IsApprover)
+                                {
+                                    <a href="onboarding/request/@row.Id" class="btn btn-sm btn-outline-secondary">Open</a>
+                                }
                             </td>
                         </tr>
                     }

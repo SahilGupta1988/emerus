@@ -128,7 +128,11 @@
                                     }
                                     else
                                     {
-                                        <a href="onboarding/request/@row.Id" class="btn btn-sm btn-outline-secondary">View</a>
+                                        @if (IsApprover)
+                                        {
+                                            <a href="onboarding/request/@row.Id" class="btn btn-sm btn-outline-secondary">View</a>
+
+                                        }
                                     }
                                 }
                                 else
@@ -230,6 +234,7 @@
     private string SearchText { get; set; } = string.Empty;
     private int PageSize { get; set; } = 10;
     private int CurrentPage { get; set; } = 1;
+    protected string? UserRole;
 
     protected override async Task OnInitializedAsync()
     {
@@ -254,7 +259,15 @@
                 r.Comments ?? string.Empty
             ))
             .ToListAsync();
+
+        var userDetails = await _commonService.GetCurrentUserAsync().ConfigureAwait(false);
+        if (userDetails.IsAuthenticated)
+        {
+            UserRole = userDetails.Role;
+        }
     }
+
+    private bool IsApprover => string.Equals(UserRole, "Approver", StringComparison.OrdinalIgnoreCase);
 
     private static string GetStatusBadgeClass(string? status)
     {

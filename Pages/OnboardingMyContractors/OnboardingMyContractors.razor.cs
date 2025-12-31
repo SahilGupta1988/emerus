@@ -25,6 +25,7 @@ namespace Emerus.ETM.Admin.Pages.OnboardingMyContractors
 
         //[Inject]
         //private NavigationManager Navigation { get; set; } = null!;
+        protected string? UserRole;
 
         protected override async Task OnInitializedAsync()
         {
@@ -49,7 +50,15 @@ namespace Emerus.ETM.Admin.Pages.OnboardingMyContractors
                     r.Comments ?? string.Empty
                 ))
                 .ToListAsync();
+
+            var userDetails = await _commonService.GetCurrentUserAsync().ConfigureAwait(false);
+            if (userDetails.IsAuthenticated)
+            {
+                UserRole = userDetails.Role;
+            }
         }
+
+        private bool IsApprover => string.Equals(UserRole, "Approver", StringComparison.OrdinalIgnoreCase);
 
         private static string GetStatusBadgeClass(string? status)
         {

@@ -22,6 +22,7 @@ namespace Emerus.ETM.Admin.Pages.AdminRequests
 
         [Inject]
         private AppDbContext DbContext { get; set; } = null!;
+        protected string? UserRole;
 
         protected override async Task OnInitializedAsync()
         {
@@ -46,7 +47,15 @@ namespace Emerus.ETM.Admin.Pages.AdminRequests
                     r.Comments ?? string.Empty
                 ))
                 .ToListAsync();
+
+            var userDetails = await _commonService.GetCurrentUserAsync().ConfigureAwait(false);
+            if (userDetails.IsAuthenticated)
+            {
+                UserRole = userDetails.Role;
+            }
         }
+
+        private bool IsApprover => string.Equals(UserRole, "Approver", StringComparison.OrdinalIgnoreCase);
 
         private static string GetStatusBadgeClass(string? status)
         {

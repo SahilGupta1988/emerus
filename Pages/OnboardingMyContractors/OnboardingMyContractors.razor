@@ -1,5 +1,5 @@
 @page "/onboarding/my-contractors"
-@attribute [Authorize(Roles = "Approver")]
+@attribute [Authorize(Roles = "Approver,Requestor")]
 
 @using Emerus.ETM.Admin.Data
 
@@ -81,7 +81,10 @@
                                     }
                                     else
                                     {
-                                        <a href="onboarding/request/@row.Id" class="btn btn-sm btn-outline-secondary">View</a>
+                                        @if (IsApprover)
+                                        {
+                                            <a href="onboarding/request/@row.Id" class="btn btn-sm btn-outline-secondary">View</a>
+                                        }
                                     }
                                 }
                                 else
