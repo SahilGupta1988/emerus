@@ -5,9 +5,11 @@
 @using System.Data.Common
 @using System.Data
 @using static Emerus.ETM.Admin.Pages.AccessStep.AccessStep
+@using Microsoft.Extensions.Logging
 @inject AppDbContext Db
 @inject NavigationManager Navigation
 @inject IJSRuntime JS
+@inject ILogger<RequestDetail> Logger
 
 @if (IsLoading)
 {
@@ -376,6 +378,8 @@ else
         IsLoading = true;
         IsNotFound = false;
 
+        Logger?.LogDebug("Loading request details for requestId={RequestId}", requestId);
+
         var currentUser = _commonService is not null ? await _commonService.GetCurrentUserAsync() : null;
         if (currentUser?.IsAuthenticated == true && !string.IsNullOrWhiteSpace(currentUser.UserEmail))
         {
@@ -384,166 +388,178 @@ else
         }
         try
         {
-            var request = await Db.ContractorRequests
-                .Include(r => r.ContractorPerson)
-                .Include(r => r.ContractorHardwareRequest)
-                .Include(r => r.Partner)
-                .FirstOrDefaultAsync(r => r.RequestId == requestId);
-
-            if (request is null)
-            {
-                IsNotFound = true;
-                return;
-            }
-
-            var person = request.ContractorPerson;
-            var hardware = request.ContractorHardwareRequest;
-
-            Demographics = new OnboardingNew.DemographicsModel
-            {
-                FirstName = person?.FirstName ?? string.Empty,
-                PreferredFirstName = person?.PreferredFirstName ?? string.Empty,
-                LastName = person?.LastName ?? string.Empty,
-                PreferredLastName = person?.PreferredLastName ?? string.Empty,
-                PersonalEmail = person?.PersonalEmail ?? string.Empty,
-                CellPhone = person?.CellPhone ?? string.Empty,
-                DateOfBirth = person?.DateOfBirth ?? default,
-                Gender = person?.Gender ?? string.Empty,
-                AddressLine1 = person?.AddressLine1 ?? string.Empty,
-                AddressLine2 = person?.AddressLine2 ?? string.Empty,
-                City = person?.City ?? string.Empty,
-                StateProvince = person?.StateProvince ?? string.Empty,
-                PostalCode = person?.PostalCode ?? string.Empty,
-                CountryCode = person?.CountryCode ?? string.Empty,
-                Identity = string.Empty
-            };
-
-            JobInfo = new OnboardingNew.JobModel
-            {
-                AgencyName = person?.AgencyName ?? string.Empty,
-                JobTitle = person?.JobTitle ?? string.Empty,
-                JobCode = person?.JobCode ?? string.Empty,
-                Department = person?.Department ?? string.Empty,
-                ExternalEmployeeId = person?.ExternalEmployeeId ?? string.Empty,
-                PriorEmployeeFlag = person?.PriorEmployeeFlag ?? false,
-                StartDate = person?.StartDate ?? default
-            };
-
-            AccessInfo = new OnboardingNew.AccessModel
-            {
-                RequestedTargets = await Db.ContractorAccessRequest
-                    .Where(a => a.RequestId == requestId)
-                    .Select(a => new OnboardingNew.RequestTargetModel
-                    {
-                        AccessRequestId = a.AccessRequestId,
-                        RequestId = a.RequestId,
-                        TargetId = a.TargetId,
-                        Environment = a.Environment,
-                        ChangeType = a.ChangeType,
-                        MirrorUserUpn = a.MirrorUserUpn,
-                        DetailJson = a.DetailJson,
-                        CreatedAt = a.CreatedAt,
-                        CreatedByUpn = a.CreatedByUpn
-                    }).ToListAsync()
-            };
-
-            Hardware = new OnboardingNew.HardwareModel
-            {
-                NeedsLaptop = hardware?.NeedsLaptop ?? false,
-                NeedsDock = hardware?.NeedsDock ?? false,
-                MonitorCount = hardware?.MonitorCount ?? 0,
-                NeedsHeadset = hardware?.NeedsHeadset ?? false,
-                NeedsHotspot = hardware?.NeedsHotspot ?? false,
-                Notes = hardware?.Notes ?? string.Empty
-            };
-
-            Badge = new OnboardingNew.BadgeModel
-            {
-                NeedsBadge = !string.IsNullOrWhiteSpace(request.RequestType),
-                PrimaryFacility = request.PrimaryFacility ?? string.Empty,
-                RequestType = request.RequestType ?? string.Empty
-            };
-
-            // Display metadata
-            VendorName = request.Partner?.DisplayName ?? string.Empty;
-            DisplayName = string.IsNullOrWhiteSpace(Demographics.PreferredFirstName) ? $"{Demographics.FirstName} {Demographics.LastName}".Trim() : $"{Demographics.PreferredFirstName} {Demographics.PreferredLastName}".Trim();
-            StatusText = request.Status ?? string.Empty;
-            StatusBadgeClass = request.Status switch
-            {
-                "Submitted" => "bg-success",
-                "In Progress" => "bg-info",
-                "Draft" => "bg-secondary",
-                "Approved" => "bg-primary",
-                "Cancelled" => "bg-danger",
-                "Returned" => "bg-warning",
-                _ => "bg-secondary"
-            };
-            CreatedAt = request.CreatedAt;
-            SubmittedAt = request.SubmittedAt;
-
-            // Load TargetCatalog from iam.TargetCatalog table
-            var list = new List<TargetCatalogModel>();
-            DbConnection? conn = null;
             try
             {
-                conn = Db.Database.GetDbConnection();
-                await conn.OpenAsync();
+                var request = await Db.ContractorRequests
+                    .Include(r => r.ContractorPerson)
+                    .Include(r => r.ContractorHardwareRequest)
+                    .Include(r => r.Partner)
+                    .FirstOrDefaultAsync(r => r.RequestId == requestId);
 
-                using var cmd = conn.CreateCommand();
-                cmd.CommandText = "SELECT TargetId, DisplayName FROM iam.TargetCatalog WHERE IsActive = 1 ORDER BY DisplayName";
-                using var reader = await cmd.ExecuteReaderAsync();
-
-                while (await reader.ReadAsync())
+                if (request is null)
                 {
-                    var item = new TargetCatalogModel();
+                    IsNotFound = true;
+                    Logger?.LogWarning("Request not found: {RequestId}", requestId);
+                    return;
+                }
 
-                    if (!reader.IsDBNull(0))
+                var person = request.ContractorPerson;
+                var hardware = request.ContractorHardwareRequest;
+
+                Demographics = new OnboardingNew.DemographicsModel
+                {
+                    FirstName = person?.FirstName ?? string.Empty,
+                    PreferredFirstName = person?.PreferredFirstName ?? string.Empty,
+                    LastName = person?.LastName ?? string.Empty,
+                    PreferredLastName = person?.PreferredLastName ?? string.Empty,
+                    PersonalEmail = person?.PersonalEmail ?? string.Empty,
+                    CellPhone = person?.CellPhone ?? string.Empty,
+                    DateOfBirth = person?.DateOfBirth ?? default,
+                    Gender = person?.Gender ?? string.Empty,
+                    AddressLine1 = person?.AddressLine1 ?? string.Empty,
+                    AddressLine2 = person?.AddressLine2 ?? string.Empty,
+                    City = person?.City ?? string.Empty,
+                    StateProvince = person?.StateProvince ?? string.Empty,
+                    PostalCode = person?.PostalCode ?? string.Empty,
+                    CountryCode = person?.CountryCode ?? string.Empty,
+                    Identity = string.Empty
+                };
+
+                JobInfo = new OnboardingNew.JobModel
+                {
+                    AgencyName = person?.AgencyName ?? string.Empty,
+                    JobTitle = person?.JobTitle ?? string.Empty,
+                    JobCode = person?.JobCode ?? string.Empty,
+                    Department = person?.Department ?? string.Empty,
+                    ExternalEmployeeId = person?.ExternalEmployeeId ?? string.Empty,
+                    PriorEmployeeFlag = person?.PriorEmployeeFlag ?? false,
+                    StartDate = person?.StartDate ?? default
+                };
+
+                AccessInfo = new OnboardingNew.AccessModel
+                {
+                    RequestedTargets = await Db.ContractorAccessRequest
+                        .Where(a => a.RequestId == requestId)
+                        .Select(a => new OnboardingNew.RequestTargetModel
+                        {
+                            AccessRequestId = a.AccessRequestId,
+                            RequestId = a.RequestId,
+                            TargetId = a.TargetId,
+                            Environment = a.Environment,
+                            ChangeType = a.ChangeType,
+                            MirrorUserUpn = a.MirrorUserUpn,
+                            DetailJson = a.DetailJson,
+                            CreatedAt = a.CreatedAt,
+                            CreatedByUpn = a.CreatedByUpn
+                        }).ToListAsync()
+                };
+
+                Hardware = new OnboardingNew.HardwareModel
+                {
+                    NeedsLaptop = hardware?.NeedsLaptop ?? false,
+                    NeedsDock = hardware?.NeedsDock ?? false,
+                    MonitorCount = hardware?.MonitorCount ?? 0,
+                    NeedsHeadset = hardware?.NeedsHeadset ?? false,
+                    NeedsHotspot = hardware?.NeedsHotspot ?? false,
+                    Notes = hardware?.Notes ?? string.Empty
+                };
+
+                Badge = new OnboardingNew.BadgeModel
+                {
+                    NeedsBadge = !string.IsNullOrWhiteSpace(request.RequestType),
+                    PrimaryFacility = request.PrimaryFacility ?? string.Empty,
+                    RequestType = request.RequestType ?? string.Empty
+                };
+
+                // Display metadata
+                VendorName = request.Partner?.DisplayName ?? string.Empty;
+                DisplayName = string.IsNullOrWhiteSpace(Demographics.PreferredFirstName) ? $"{Demographics.FirstName} {Demographics.LastName}".Trim() : $"{Demographics.PreferredFirstName} {Demographics.PreferredLastName}".Trim();
+                StatusText = request.Status ?? string.Empty;
+                StatusBadgeClass = request.Status switch
+                {
+                    "Submitted" => "bg-success",
+                    "In Progress" => "bg-info",
+                    "Draft" => "bg-secondary",
+                    "Approved" => "bg-primary",
+                    "Cancelled" => "bg-danger",
+                    "Returned" => "bg-warning",
+                    _ => "bg-secondary"
+                };
+                CreatedAt = request.CreatedAt;
+                SubmittedAt = request.SubmittedAt;
+
+                // Load TargetCatalog from iam.TargetCatalog table
+                var list = new List<TargetCatalogModel>();
+                DbConnection? conn = null;
+                try
+                {
+                    conn = Db.Database.GetDbConnection();
+                    await conn.OpenAsync();
+
+                    using var cmd = conn.CreateCommand();
+                    cmd.CommandText = "SELECT TargetId, DisplayName FROM iam.TargetCatalog WHERE IsActive = 1 ORDER BY DisplayName";
+                    using var reader = await cmd.ExecuteReaderAsync();
+
+                    while (await reader.ReadAsync())
                     {
-                        item.TargetId = reader.GetGuid(0);
+                        var item = new TargetCatalogModel();
+
+                        if (!reader.IsDBNull(0))
+                        {
+                            item.TargetId = reader.GetGuid(0);
+                        }
+
+                        if (!reader.IsDBNull(1))
+                        {
+                            item.DisplayName = reader.GetString(1);
+                        }
+
+                        list.Add(item);
                     }
 
-                    if (!reader.IsDBNull(1))
+                    TargetCatalog = list;
+                }
+                catch (Exception ex)
+                {
+                    Logger?.LogError(ex, "Failed to load TargetCatalog from DB");
+                    TargetCatalog = new List<TargetCatalogModel>();
+                }
+                finally
+                {
+                    if (conn is not null && conn.State == ConnectionState.Open)
                     {
-                        item.DisplayName = reader.GetString(1);
+                        await conn.CloseAsync();
                     }
-
-                    list.Add(item);
                 }
 
-                TargetCatalog = list;
-            }
-            catch
-            {
-                TargetCatalog = new List<TargetCatalogModel>();
-            }
-            finally
-            {
-                if (conn is not null && conn.State == ConnectionState.Open)
+                // Load compliance documents for this request (uses IFileService injected via _Imports.razor)
+                try
                 {
-                    await conn.CloseAsync();
+                    if (requestId != Guid.Empty)
+                    {
+                        ComplianceDocuments = await _fileService.GetDocumentByRequestIdAsync(requestId).ConfigureAwait(false);
+                    }
+                    else
+                    {
+                        ComplianceDocuments = new List<ContractorDocument>();
+                    }
                 }
-            }
-
-            // Load compliance documents for this request (uses IFileService injected via _Imports.razor)
-            try
-            {
-                if (requestId != Guid.Empty)
+                catch (Exception ex)
                 {
-                    ComplianceDocuments = await _fileService.GetDocumentByRequestIdAsync(requestId).ConfigureAwait(false);
-                }
-                else
-                {
+                    Logger?.LogError(ex, "Failed to load compliance documents for request {RequestId}", requestId);
                     ComplianceDocuments = new List<ContractorDocument>();
                 }
             }
-            catch
+            catch (Exception ex)
             {
-                ComplianceDocuments = new List<ContractorDocument>();
+                Logger?.LogError(ex, "Unhandled error while loading request details for {RequestId}", requestId);
+                throw;
             }
         }
         finally
         {
             IsLoading = false;
+            Logger?.LogDebug("Finished loading request details for requestId={RequestId}", requestId);
         }
     }
 
@@ -559,8 +575,9 @@ else
         {
             await JS.InvokeVoidAsync("print");
         }
-        catch
+        catch (Exception ex)
         {
+            Logger?.LogWarning(ex, "Print call failed for request {RequestId}", requestId);
             // ignore
         }
     }
@@ -604,6 +621,7 @@ else
             var req = await Db.ContractorRequests.FirstOrDefaultAsync(r => r.RequestId == requestId);
             if (req is null)
             {
+                Logger?.LogWarning("ConfirmAction: request not found {RequestId}", requestId);
                 await JS.InvokeVoidAsync("alert", "Request not found.");
                 return;
             }
@@ -621,11 +639,14 @@ else
             }
             else
             {
+                Logger?.LogWarning("ConfirmAction: unknown ActionPending={ActionPending} for {RequestId}", ActionPending, requestId);
                 // unknown action
                 return;
             }
 
             await Db.SaveChangesAsync();
+
+            Logger?.LogInformation("Request {RequestId} status updated to {Status} by {User}", requestId, req.Status, requesterUpn ?? "unknown");
 
             // update UI
             StatusText = req.Status;
@@ -652,13 +673,15 @@ else
                 else if (req.Status == "Draft")
                     await JS.InvokeVoidAsync("alert", "Request returned for changes.");
             }
-            catch
+            catch (Exception ex)
             {
+                Logger?.LogDebug(ex, "JS alert failed after ConfirmAction for {RequestId}", requestId);
                 // ignore JS errors
             }
         }
-        catch
+        catch (Exception ex)
         {
+            Logger?.LogError(ex, "Failed to perform ConfirmAction for {RequestId}", requestId);
             await JS.InvokeVoidAsync("alert", "Failed to perform action.");
         }
         finally
@@ -672,6 +695,8 @@ else
         var confirmed = await JS.InvokeAsync<bool>("confirm", "Approve this request?");
         if (!confirmed) return;
 
+        Logger?.LogDebug("User confirmed approve for request {RequestId}", requestId);
+
         // Ensure at least one compliance document is approved before approving request
         try
         {
@@ -680,12 +705,14 @@ else
 
             if (approvedCount == 0)
             {
+                Logger?.LogWarning("Attempt to approve request {RequestId} with no approved documents", requestId);
                 await JS.InvokeVoidAsync("alert", "At least one compliance document must be approved before approving the request.");
                 return;
             }
         }
-        catch
+        catch (Exception ex)
         {
+            Logger?.LogError(ex, "Unable to verify document approvals for {RequestId}", requestId);
             // If the check fails for some reason, prevent approving to avoid inconsistent state.
             await JS.InvokeVoidAsync("alert", "Unable to verify document approvals. Try again later.");
             return;
@@ -697,6 +724,7 @@ else
             var req = await Db.ContractorRequests.FirstOrDefaultAsync(r => r.RequestId == requestId);
             if (req is null)
             {
+                Logger?.LogWarning("ApproveRequest: request not found {RequestId}", requestId);
                 await JS.InvokeVoidAsync("alert", "Request not found.");
                 return;
             }
@@ -705,6 +733,8 @@ else
             req.ApprovedAt = DateTime.UtcNow;
             // optionally set completed/approved metadata here, e.g. CompletedAt
             await Db.SaveChangesAsync();
+
+            Logger?.LogInformation("Request {RequestId} approved by {User}", requestId, requesterUpn ?? "unknown");
 
             StatusText = req.Status;
             StatusBadgeClass = "bg-primary";
@@ -716,13 +746,15 @@ else
             {
                 await JS.InvokeVoidAsync("alert", "Request approved successfully.");
             }
-            catch
+            catch (Exception ex)
             {
+                Logger?.LogDebug(ex, "JS alert failed after ApproveRequest for {RequestId}", requestId);
                 // ignore JS errors
             }
         }
-        catch
+        catch (Exception ex)
         {
+            Logger?.LogError(ex, "Failed to approve request {RequestId}", requestId);
             await JS.InvokeVoidAsync("alert", "Failed to approve request.");
         }
         finally
@@ -746,11 +778,18 @@ else
                 doc.Notes = "";
                 await Db.SaveChangesAsync();
 
+                Logger?.LogInformation("Document {DocumentId} approved by {User} for request {RequestId}", documentId, requesterUpn ?? "unknown", requestId);
+
                 await OnParametersSetAsync();
+            }
+            else
+            {
+                Logger?.LogWarning("ApproveDocument: document not found {DocumentId}", documentId);
             }
         }
         catch (Exception ex)
         {
+            Logger?.LogError(ex, "Error approving document {DocumentId} for request {RequestId}", documentId, requestId);
             await JS.InvokeVoidAsync("alert", $"Error approving document: {ex.Message}");
         }
         finally
@@ -791,6 +830,7 @@ else
             var doc = await Db.Set<ContractorDocument>().FirstOrDefaultAsync(d => d.DocumentId == PendingDocId);
             if (doc is null)
             {
+                Logger?.LogWarning("ConfirmRejectDocument: document not found {DocumentId}", PendingDocId);
                 await JS.InvokeVoidAsync("alert", "Document not found.");
                 return;
             }
@@ -801,6 +841,8 @@ else
             doc.VerifiedAt = DateTime.UtcNow;
 
             await Db.SaveChangesAsync();
+
+            Logger?.LogInformation("Document {DocumentId} rejected by {User} for request {RequestId} — notes: {Notes}", doc.DocumentId, requesterUpn ?? "unknown", doc.RequestId, DocRejectNotes);
 
             // close modal and refresh list
             ShowDocRejectModal = false;
@@ -814,6 +856,7 @@ else
         }
         catch (Exception ex)
         {
+            Logger?.LogError(ex, "Error rejecting document {DocumentId} for request {RequestId}", PendingDocId, requestId);
             await JS.InvokeVoidAsync("alert", $"Error rejecting document: {ex.Message}");
         }
         finally
